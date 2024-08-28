@@ -6,9 +6,10 @@ import 'package:http/http.dart' as http;
 import 'logger.dart';
 
 mixin NetworkService {
-  Future<dynamic> get(String url, { Map<String, String>? headers }) async {
-    _logRequest(url, headers: headers);
-    final response = await http.get(Uri.parse(url), headers: headers);
+  Future<dynamic> get(String url, { Map<String, String>? headers, Map<String, String>? params }) async {
+    var combineUrl = Uri.parse(url).replace(queryParameters: params).toString();
+    _logRequest(combineUrl, headers: headers);
+    final response = await http.get(Uri.parse(combineUrl), headers: headers);
     return _parseBody(response);
   }
 

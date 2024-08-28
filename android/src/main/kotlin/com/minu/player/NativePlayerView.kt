@@ -12,6 +12,8 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.dash.DashMediaSource
+import androidx.media3.exoplayer.dash.DefaultDashChunkSource
 import androidx.media3.exoplayer.drm.DefaultDrmSessionManager
 import androidx.media3.exoplayer.hls.HlsMediaSource
 import androidx.media3.exoplayer.source.MediaSource
@@ -143,25 +145,26 @@ fun NativePlayerView.createMediaSource(creationParams: Map<*, *>): MediaSource {
     val platformIdValue = creationParams[PlatformViewParams.platformId] as String
     val playBackUrl: String =  creationParams[PlatformViewParams.playbackUrl] as String
     val moviePlatformType = MoviePlatformType.fromString(platformIdValue)
-    val licenseKeyUrl = creationParams[PlatformViewParams.licenseUrl] as String
-    val token = creationParams[PlatformViewParams.token] as String?
+    val licenseKeyUrl = creationParams[PlatformViewParams.licenseUrl] as String?
+    val metadata = creationParams[PlatformViewParams.metadata] as Map<*, *>
 
     val drmSchemeUuid = C.WIDEVINE_UUID // DRM Type
+    val dataSourceFactory = DefaultHttpDataSource.Factory()
+        .setTransferListener(
+            DefaultBandwidthMeter.Builder(context)
+                .setResetOnNetworkTypeChange(false)
+                .build()
+        )
+        .setConnectTimeoutMs(20000)
+        .setReadTimeoutMs(20000)
+
+    val manifestDataSourceFactory = DefaultHttpDataSource.Factory()
 
     when(moviePlatformType) {
         MoviePlatformType.disney -> {
-            val dataSourceFactory = DefaultHttpDataSource.Factory()
-                .setTransferListener(
-                    DefaultBandwidthMeter.Builder(context)
-                        .setResetOnNetworkTypeChange(false)
-                        .build()
-                )
-                .setConnectTimeoutMs(20000)
-                .setReadTimeoutMs(20000)
-
-            val disneyMediaDrmCallback = DisneyDrmCallback(binaryMessenger, licenseKeyUrl, dataSourceFactory, token!!)
+            val token = metadata["token"] as String
+            val disneyMediaDrmCallback = DisneyDrmCallback(binaryMessenger, licenseKeyUrl!!, dataSourceFactory, token)
             val drmSessionManager = DefaultDrmSessionManager.Builder().build(disneyMediaDrmCallback)
-            val manifestDataSourceFactory = DefaultHttpDataSource.Factory()
 
             val hlsMediaSource =
                 HlsMediaSource.Factory(manifestDataSourceFactory)
@@ -173,12 +176,6 @@ fun NativePlayerView.createMediaSource(creationParams: Map<*, *>): MediaSource {
                             .setDrmConfiguration(
                                 MediaItem.DrmConfiguration.Builder(drmSchemeUuid)
                                     .setLicenseUri(licenseKeyUrl)
-//                                    .setLicenseRequestHeaders(mapOf("Content-Type" to "application/octet-stream"))
-//                                    .setLicenseRequestHeaders(mapOf("X-BAMSDK-Platform" to "android-tv"))
-//                                    .setLicenseRequestHeaders(mapOf("Accept" to "application/json, application/vnd.media-service+json; version=2"))
-//                                    .setLicenseRequestHeaders(mapOf("X-BAMSDK-Client-ID" to "disney-svod-3d9324fc"))
-//                                    .setLicenseRequestHeaders(mapOf("X-DSS-Edge-Accept" to "vnd.dss.edge+json; version=2"))
-//                                    .setLicenseRequestHeaders(mapOf("Authorization" to "Bearer $token"))
                                     .build()
                             )
                             .setMimeType(MimeTypes.APPLICATION_M3U8)
@@ -187,6 +184,34 @@ fun NativePlayerView.createMediaSource(creationParams: Map<*, *>): MediaSource {
                     )
 
             return hlsMediaSource
+        }
+
+        MoviePlatformType.prime -> {
+            val movieId = metadata["movieId"] as String
+            val deviceId = metadata["deviceId"] as String
+            val mid = metadata["mid"] as String
+            val cookies = metadata["cookies"] as String
+            val primeMediaDrmCallback = PrimeDrmCallback(dataSourceFactory, movieId, deviceId, mid, cookies )
+            val drmSessionManager = DefaultDrmSessionManager.Builder().build(primeMediaDrmCallback)
+            val dashChunkSourceFactory = DefaultDashChunkSource.Factory(dataSourceFactory)
+
+            val dashMediaSource = DashMediaSource.Factory(dashChunkSourceFactory, manifestDataSourceFactory)
+                    .setDrmSessionManagerProvider { drmSessionManager }
+                    .createMediaSource(
+                        MediaItem.Builder()
+                            .setUri(playBackUrl)
+                            // DRM Configuration
+                            .setDrmConfiguration(
+                                MediaItem.DrmConfiguration.Builder(drmSchemeUuid)
+                                    .setLicenseUri(licenseKeyUrl)
+                                    .build()
+                            )
+                            .setMimeType(MimeTypes.APPLICATION_MPD)
+                            .setTag(null)
+                            .build()
+                    )
+
+            return dashMediaSource
         }
         else -> {
             throw RuntimeException("Unimplemented player for movie platform: $moviePlatformType")

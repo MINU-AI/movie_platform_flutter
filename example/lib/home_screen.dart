@@ -1,7 +1,6 @@
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:player/player.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -33,7 +32,7 @@ class _HomeState extends State<HomeScreen> {
           SizedBox(
             width: screenWidth,
             height: 9 / 16 * screenWidth,
-            child: _player?.widgetPlayer,
+            child: _player != null ? PlayerView.creatPlater(player: _player!) : null,
           ),
 
           Row(
@@ -69,20 +68,18 @@ class _HomeState extends State<HomeScreen> {
 
           GestureDetector(
           onTap: () {
-            final pickerView = MoviePickerView.createView(MoviePlatformType.disney);
+            final pickerView = MoviePickerView.createView(MoviePlatformType.prime);
 
             Navigator.of(context).push(CupertinoPageRoute(builder: (_) => pickerView)).then(
               (value) async {           
-                  final moviePlayback = value as MoviePlayback?;                  
-                  if(moviePlayback != null) {
-                    final accessToken = await dataCacheManager.get(CacheDataKey.disney_video_access_token);
+                  final moviePayload = value as MoviePayload?;                  
+                  if(moviePayload != null) {
                     if(_player == null) {              
                       setState(() {
-                        _player = DrmPlayer.creatPlayer(moviePlayback: moviePlayback, platform: MoviePlatformType.disney, authorizeToken: accessToken);
+                        _player = DrmPlayer.creatPlayer(moviePayload: moviePayload, platform: MoviePlatformType.prime);
                       });                                                    
                     } else {             
-                      _player!.updatePlayer(moviePlayback: moviePlayback, platform: MoviePlatformType.disney, authorizeToken: accessToken);
-                      const MethodChannel(platformChannel).invokeMethod(NativeMethodCall.controlPlayer.name, {"action" : PlayerControlAction.changePlayback.name, "value" : _player!.paramsForPlayerView});
+                      _player!.updatePlayer(moviePayload: moviePayload, platform: MoviePlatformType.prime);
                     }
                   }                       
               }

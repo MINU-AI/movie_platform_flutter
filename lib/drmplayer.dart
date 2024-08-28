@@ -2,48 +2,42 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/services.dart';
-import 'package:flutter/widgets.dart';
 
 import 'logger.dart';
 import 'movie_platform_api.dart';
 import 'platform_constant.dart';
-import 'player_view.dart';
 
 abstract class DrmPlayer {
-  MoviePlayback moviePlayback;
+  MoviePayload moviePayload;
   MoviePlatformType platform;
-  String? authorizeToken;
  
   final channel = const MethodChannel(platformChannel);
   
   final List<PlayerListener> _listeners = [];
 
-  DrmPlayer({ required this.moviePlayback, required this.platform, this.authorizeToken });
+  DrmPlayer({ required this.moviePayload, required this.platform, });
 
-  factory DrmPlayer.creatPlayer({ required MoviePlayback moviePlayback, required MoviePlatformType platform, String? authorizeToken}) {
+  factory DrmPlayer.creatPlayer({ required MoviePayload moviePayload, required MoviePlatformType platform}) {
     if(Platform.isAndroid) {
-      return _WideVinePlayer(moviePlayback: moviePlayback, platform: platform, authorizeToken: authorizeToken);
+      return _WideVinePlayer(moviePayload: moviePayload, platform: platform);
     }
     throw "Unimplemented for this platform";
   }
 
   Map<String, dynamic> get paramsForPlayerView {
     return {
-      PlatformViewParams.playbackUrl.name : moviePlayback.playbackUrl,
-      PlatformViewParams.licenseUrl.name : moviePlayback.licenseKeyUrl,
+      PlatformViewParams.playbackUrl.name : moviePayload.playback.playbackUrl,
+      PlatformViewParams.licenseUrl.name : moviePayload.playback.licenseKeyUrl,
       PlatformViewParams.platformId.name: platform.name,
-      PlatformViewParams.token.name : authorizeToken
+      PlatformViewParams.metadata.name: moviePayload.metadata,
     };
   }
 
-  void updatePlayer({ required MoviePlayback moviePlayback, required MoviePlatformType platform, String? authorizeToken}){
-    this.moviePlayback = moviePlayback;
+  void updatePlayer({ required MoviePayload moviePayload, required MoviePlatformType platform}){
+    this.moviePayload = moviePayload;
     this.platform = platform;
-    this.authorizeToken = authorizeToken;
-  }
 
-  Widget get widgetPlayer {
-    return PlayerView.creatPlater(player: this, params: paramsForPlayerView);
+    const MethodChannel(platformChannel).invokeMethod(NativeMethodCall.controlPlayer.name, {"action" : PlayerControlAction.changePlayback.name, "value" : paramsForPlayerView});
   }
 
   void pause();
@@ -74,7 +68,7 @@ mixin PlayerListener {
 
 class _WideVinePlayer extends DrmPlayer {
  
-  _WideVinePlayer({ required super.moviePlayback, required super.platform, super.authorizeToken }) {
+  _WideVinePlayer({ required super.moviePayload, required super.platform }) {
     channel.setMethodCallHandler(_handleMethodCall);
   }
 
@@ -104,7 +98,7 @@ class _WideVinePlayer extends DrmPlayer {
     switch(nativeCall) {
       case NativeMethodCall.refreshToken:
         final platformType = MoviePlatformType.fromString(call.arguments as String);
-        final platformApi = MoviePlatformFactory.create(platformType);
+        final platformApi = MoviePlatformApiFactory.create(platformType);
         return platformApi.refreshToken();
       
       case NativeMethodCall.onPlaybackStateChanged:

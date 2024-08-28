@@ -1,14 +1,18 @@
 
+import 'package:player/prime_api.dart';
+
 import 'disney_api.dart';
 
 abstract class MoviePlatformApi {
   Future<MovieInfo> getMovieInfo(String movieId);
 
-  Future<MoviePlayback> getPlaybackUrl(String movieId);
+  Future<MoviePlayback> getPlaybackUrl(List<dynamic> params);
 
   Future<dynamic> getToken({ List<dynamic>? params });
 
   Future<dynamic> refreshToken();
+
+  dynamic get metadata => {};
 
 }
 
@@ -33,7 +37,7 @@ final class MovieInfo {
   final String? thumbnail;
   final int? duration;
 
-  MovieInfo({required this.title, required this.thumbnail, required this.duration});
+  MovieInfo({required this.title, this.thumbnail, this.duration});
 
   dynamic toJson() {
     return {
@@ -54,7 +58,7 @@ final class MoviePlayback {
   final String? licenseKeyUrl;
   final String? licenseCertificateUrl;
 
-  MoviePlayback({required this.playbackUrl, required this.licenseKeyUrl, required this.licenseCertificateUrl});
+  MoviePlayback({required this.playbackUrl, this.licenseKeyUrl, this.licenseCertificateUrl});
 
   dynamic toJson() {
     return {
@@ -68,17 +72,25 @@ final class MoviePlayback {
   String toString() {
     return "${toJson()}";
   }
-
-  
 }
 
-class MoviePlatformFactory {
-  MoviePlatformFactory._();
+class MoviePayload {
+  final MoviePlayback playback;
+  final MovieInfo? info;
+  final Map<String, dynamic> metadata;
+
+  MoviePayload({required this.playback, required this.info, required this.metadata});
+}
+
+class MoviePlatformApiFactory {
+  MoviePlatformApiFactory._();
 
   static MoviePlatformApi create(MoviePlatformType type) {
     switch(type) {
       case MoviePlatformType.disney:
         return DisneyApi();
+      case MoviePlatformType.prime:
+        return PrimeApi();
       default:
         throw "Unsupported plaform type: $type";
     }

@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/cupertino.dart';
+import 'package:player/extension.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
 import 'cache_data_manager.dart';
@@ -9,7 +10,7 @@ import 'movie_platform_api.dart';
 import 'movie_web_view.dart';
 
 class DisneyWebView extends MovieWebView {
-  const DisneyWebView({super.key, required super.isLoggedIn});
+  const DisneyWebView({super.key, required super.isLoggedIn, required super.platform });
 
   @override
   State<StatefulWidget> createState() => _DisneyState();
@@ -17,7 +18,8 @@ class DisneyWebView extends MovieWebView {
 
 class _DisneyState extends PlatformState<DisneyWebView> {
 
-  final _platformApi = MoviePlatformFactory.create(MoviePlatformType.disney);
+  @override
+  MoviePlatformApi get platformApi => MoviePlatformApiFactory.create(MoviePlatformType.disney);
 
   @override
   String? get userAgent => "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Safari/537.36";
@@ -43,12 +45,12 @@ class _DisneyState extends PlatformState<DisneyWebView> {
                       }
                       profileId;
                     """;
-      final profileId = (await runJavaScriptReturningResult(jsCode) as String?)?.trimStringFromJavascript();
+      final profileId = (await runJavaScriptReturningResult(jsCode) as String).trimStringFromJavascript();
       logger.i("ProfileId: $profileId");
-      if(profileId != null && profileId.isNotEmpty) {
+      if(profileId.isNotEmpty) {
         await getApiToken();
         try {
-          await _platformApi.getToken(params: [profileId]);
+          await platformApi.getToken(params: [profileId]);
         } catch(e) {
           logger.e("switchProfile error: $e");
         }
@@ -61,15 +63,17 @@ class _DisneyState extends PlatformState<DisneyWebView> {
       if(contentId != null) { 
         await getApiToken();
         try {       
-          // final movieInfo = await _platformApi.getMovieInfo(contentId);
+          final movieInfo = await platformApi.getMovieInfo(contentId);          
           // logger.i("Get movie info: $movieInfo");        
-          final moviePlayback = await _platformApi.getPlaybackUrl(contentId);
-          if(mounted) {
-            Navigator.of(context).pop(moviePlayback);
-          }
+          final moviePlayback = await platformApi.getPlaybackUrl([contentId]);
+          final token = await dataCacheManager.get(CacheDataKey.disney_video_access_token);
+          final refreshToken = await dataCacheManager.get(CacheDataKey.disney_refresh_token);
+          final Map<String, dynamic> metadata = {"token" : token, "refreshToken" : refreshToken };
+          metadata.addAll(platformApi.metadata);
+          final moviePayload = MoviePayload(playback: moviePlayback, info: movieInfo, metadata: metadata);
+          popScreen(moviePayload);
         } catch(e) {
           logger.e("Get movie info: $e");
-          
         }
       }
        toggleLoading(false);
@@ -93,9 +97,9 @@ extension on _DisneyState {
                       }
                       value;
                    """;
-    final data = (await runJavaScriptReturningResult(jsCode) as String?)?.trimStringFromJavascript();
+    final data = (await runJavaScriptReturningResult(jsCode) as String).trimStringFromJavascript();
     logger.i("Got token data: $data");
-    if (data != null) {
+    if (data.isNotEmpty) {
       final jsonData = jsonDecode(data);
       final token = jsonData["context"]["token"] as String?;
       if(token != null) {
@@ -108,12 +112,4 @@ extension on _DisneyState {
   }
 }
 
-extension on String {
-  //Trim returned string from javascript
-  String trimStringFromJavascript() {
-    var data = replaceFirst("\"", "", 0);
-    data = data.replaceFirst("\"", "", data.length - 1);
-    data = data.replaceAll("\\", "");
-    return data;
-  }
-}
+

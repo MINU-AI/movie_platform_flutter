@@ -8,8 +8,8 @@ class PlatformViewParams {
     companion object  {
         const val playbackUrl = "playbackUrl"
         const val licenseUrl = "licenseUrl"
-        const val token = "token"
         const val platformId = "platformId"
+        const val metadata = "metadata"
     }
 }
 

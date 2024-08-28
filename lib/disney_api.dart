@@ -37,7 +37,8 @@ class DisneyApi extends MoviePlatformApi with NetworkService {
   }
 
   @override
-  Future<MoviePlayback> getPlaybackUrl(String movieId) async {
+  Future<MoviePlayback> getPlaybackUrl(List<dynamic> params) async {
+    final movieId = params[0] as String;
     final resourceId = await _getResourceId(movieId);
     await _refreshToken();
     final playbackEncryptionDefault = config["services"]["media"]["extras"]["playbackEncryptionDefault"] as String;

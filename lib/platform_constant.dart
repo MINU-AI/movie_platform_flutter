@@ -5,8 +5,8 @@ enum PlatformViewType {
 enum PlatformViewParams {
   playbackUrl,
   licenseUrl,
-  token,
   platformId,
+  metadata,
 }
 
 const platformChannel = "com.minu.player/channel";

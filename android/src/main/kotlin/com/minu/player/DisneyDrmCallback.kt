@@ -27,16 +27,7 @@ class DisneyDrmCallback(
     private val licenseUrl: String,
     private val dataSourceFactory: HttpDataSource.Factory,
     private  var token: String,
-    ) : MediaDrmCallback {
-    private val TAG = "DisneyDrmCallback"
-
-    override fun executeProvisionRequest(
-        uuid: UUID,
-        request: ExoMediaDrm.ProvisionRequest
-    ): ByteArray {
-        val url = request.defaultUrl + "&signedRequest=" + String(request.data)
-        return executePost(dataSourceFactory, url, null, emptyMap())
-    }
+    ) : MoviePlatformDrmCallback {
 
     override fun executeKeyRequest(uuid: UUID, request: ExoMediaDrm.KeyRequest): ByteArray {
         val requestProperties: MutableMap<String, String> = HashMap()
@@ -52,7 +43,7 @@ class DisneyDrmCallback(
     }
 
     @Throws(MediaDrmCallbackException::class)
-    private fun executePost(
+    override fun executePost(
         dataSourceFactory: DataSource.Factory,
         url: String,
         httpBody: ByteArray?,
@@ -128,24 +119,5 @@ class DisneyDrmCallback(
                 e
             )
         }
-    }
-
-    private fun getRedirectUrl(
-        exception: InvalidResponseCodeException, manualRedirectCount: Int
-    ): String? {
-        // For POST requests, the underlying network stack will not normally follow 307 or 308
-        // redirects automatically. Do so manually here.
-        val manuallyRedirect = (
-                (exception.responseCode == 307 || exception.responseCode == 308)
-                        && manualRedirectCount < 5)
-        if (!manuallyRedirect) {
-            return null
-        }
-        val headerFields = exception.headerFields
-        val locationHeaders = headerFields["Location"]
-        if (!locationHeaders.isNullOrEmpty()) {
-            return locationHeaders[0]
-        }
-        return null
     }
 }

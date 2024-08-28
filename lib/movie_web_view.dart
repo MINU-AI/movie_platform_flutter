@@ -4,6 +4,8 @@ import 'dart:async';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
+import 'package:player/assets.dart';
+import 'package:player/prime_web_view.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:webview_flutter_wkwebview/webview_flutter_wkwebview.dart';
 
@@ -20,13 +22,18 @@ final Set<Factory<OneSequenceGestureRecognizer>> gestureRecognizers = {
 
 abstract class MovieWebView extends MoviePickerView {
   final bool isLoggedIn;
+  final MoviePlatformType platform;
 
-  const MovieWebView({super.key, required this.isLoggedIn });
+  const MovieWebView({super.key, required this.isLoggedIn, required this.platform });
 
   factory MovieWebView.create({ required MoviePlatformType platform }) {
     switch(platform) {
       case MoviePlatformType.disney:
-        return const DisneyWebView(isLoggedIn: false);
+        return DisneyWebView(isLoggedIn: false, platform: platform,);
+        
+      case MoviePlatformType.prime:
+        return PrimeWebView(isLoggedIn: true, platform: platform);
+
       default:
         throw "Unsupported platform: $platform";
     }
@@ -36,6 +43,12 @@ abstract class MovieWebView extends MoviePickerView {
 abstract class PlatformState< V extends MovieWebView> extends State<V> {
 
   late final WebViewController _controller;
+  MoviePlatformApi? _moviePlatformApi;
+
+  MoviePlatformApi get platformApi {
+    _moviePlatformApi ??= MoviePlatformApiFactory.create(widget.platform);
+    return _moviePlatformApi!;
+  }
 
   void onUrlChange(UrlChange urlChange) {}
 
@@ -45,7 +58,9 @@ abstract class PlatformState< V extends MovieWebView> extends State<V> {
 
   void onJavascriptReceived(String message){}
 
-  String? get injectedJs {
+  void popScreen<T>(T result) => Navigator.of(context).pop(result);
+
+  String? get injectedJavascript {
     return null;
   }
 
@@ -83,7 +98,10 @@ abstract class PlatformState< V extends MovieWebView> extends State<V> {
           onProgress: (int progress) {},
           onUrlChange: onUrlChange,
           onPageStarted: (url) {
-            logger.i("onPageStarted: $url");            
+            logger.i("onPageStarted: $url");   
+            if(injectedJavascript != null) {
+              runJavascript(injectedJavascript!);
+            }         
             onPageStarted(url);
           },
           onPageFinished: (url) {
@@ -111,16 +129,46 @@ abstract class PlatformState< V extends MovieWebView> extends State<V> {
   Widget build(BuildContext context) {
     return SafeArea(
             child: Stack(
+                    alignment: Alignment.bottomLeft,
                     children: [
                       WebViewWidget(                        
                         controller: _controller,
                         gestureRecognizers: gestureRecognizers,
                       ),
 
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const SizedBox(width: 16,),
+
+                          Column(
+                            mainAxisSize: MainAxisSize.min,                        
+                            children: [
+                              GestureDetector(
+                                onTap: (){
+                                  _controller.goBack();
+                                },
+                                child: Container(
+                                  decoration: BoxDecoration(color: const Color(0xFFFFFFFF), borderRadius: BorderRadius.circular(40)),
+                                  child: SizedBox(
+                                    width: 40,
+                                    height: 40,
+                                    child: Image.asset(Assets.icBack, width: 12,)
+                                  )
+                                )
+                              ),
+
+                              const SizedBox(height: 16,)
+
+                            ],
+                          ),
+                        ],
+                      ),
+
                       Visibility(
                         visible: _showLoading,
                         child: const LoadingView(),
-                      ),
+                      ),                      
                     ],
                   )
           );

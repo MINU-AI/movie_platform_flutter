@@ -10,16 +10,15 @@ import 'platform_constant.dart';
 
 abstract class PlayerView extends StatefulWidget {
   final PlatformViewType viewType = PlatformViewType.widevine_player;
-  final Map<String, dynamic> params;
   final DrmPlayer player;
 
-  const PlayerView({super.key, required this.params, required this.player });
+  const PlayerView({super.key, required this.player });
 
   Widget get nativePlayerView;
 
-  factory PlayerView.creatPlater({required DrmPlayer player, required Map<String, dynamic>  params}) {
+  factory PlayerView.creatPlater({required DrmPlayer player}) {
     if(Platform.isAndroid) {
-      return _AndroidPlayerView(player: player, params: params);
+      return _AndroidPlayerView(player: player);
     }
     throw "Unimplemented for this platform";
   }
@@ -100,14 +99,14 @@ class _PlayerViewState extends State<PlayerView> with PlayerListener {
 
 class _AndroidPlayerView extends PlayerView {
   
-  const _AndroidPlayerView({required super.player, required super.params });
+  const _AndroidPlayerView({required super.player });
   
   @override
   Widget get nativePlayerView {
     return AndroidView(
       viewType: viewType.name,
       layoutDirection: TextDirection.ltr,
-      creationParams: params,
+      creationParams: player.paramsForPlayerView,
       creationParamsCodec: const StandardMessageCodec(),
     );
   }
