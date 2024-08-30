@@ -33,6 +33,7 @@ enum class NativeMethodCall {
     refreshToken,
     onPlaybackStateChanged,
     onPlayerError,
+    onPlayingChange,
     controlPlayer;
 
     companion object {

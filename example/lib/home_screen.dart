@@ -18,7 +18,6 @@ class _HomeState extends State<HomeScreen> {
     MoviePlayback(playbackUrl: "https://vod-akc-na-central-1.media.dssott.com/dvt1=exp=1724732116~url=%2Fgrn%2Fps01%2Fdisney%2F771b8483-3048-4a4c-adec-c659ae4b2f8b%2F~aid=f3a97c05-5882-48c6-b512-800c7cd73d58~did=b0fcde28-b4fc-4452-97d2-30018b4fe4db~kid=k01~hmac=0426c5ab20f26cb60eeb5306f1d35e9f6eda5ecd3c754496531dea20661cd6c7/grn/ps01/disney/771b8483-3048-4a4c-adec-c659ae4b2f8b/ctr-all-a26595c4-4cd0-4451-849d-99694fc2b867-a73b8771-a714-4530-a24d-b6dc7df7fcf0.m3u8?v=1&hash=38b6ad538f185012f126b566206ea1759de6fab9", licenseKeyUrl: "https://disney.playback.edge.bamgrid.com/widevine/v1/obtain-license", licenseCertificateUrl: "https://playback-certs.bamgrid.com/static/v1.0/widevine.bin"),
     MoviePlayback(playbackUrl: "https://vod-akc-na-east-1.media.dssott.com/dvt1=exp=1724732385~url=%2Fps01%2Fdisney%2F8f262fdd-5850-46cb-9a93-5217e0dbd0c8%2F~aid=f3a97c05-5882-48c6-b512-800c7cd73d58~did=b0fcde28-b4fc-4452-97d2-30018b4fe4db~kid=k01~hmac=7c1eebab34e6fd766b86b7c1c3d5943b4481631815330d6bc6fe452dbce2dff3/ps01/disney/8f262fdd-5850-46cb-9a93-5217e0dbd0c8/ctr-all-b529f023-84bc-4d8d-9281-17228e038781-f0fd9dcd-bdb6-49b7-b723-e3614efeac68.m3u8?a=3&v=1&hash=5db04df3a9a939a6c0610b41e04fca56eed9b533", licenseKeyUrl: "https://disney.playback.edge.bamgrid.com/widevine/v1/obtain-license", licenseCertificateUrl: "https://playback-certs.bamgrid.com/static/v1.0/widevine.bin")
   ];
-  var _currentMovieIndex = 0;
 
   @override
   Widget build(BuildContext context) {
@@ -68,7 +67,7 @@ class _HomeState extends State<HomeScreen> {
 
           GestureDetector(
           onTap: () {
-            final pickerView = MoviePickerView.createView(MoviePlatformType.prime);
+            final pickerView = MoviePickerView.createView(MoviePlatformType.youtube);
 
             Navigator.of(context).push(CupertinoPageRoute(builder: (_) => pickerView)).then(
               (value) async {           
@@ -76,10 +75,10 @@ class _HomeState extends State<HomeScreen> {
                   if(moviePayload != null) {
                     if(_player == null) {              
                       setState(() {
-                        _player = DrmPlayer.creatPlayer(moviePayload: moviePayload, platform: MoviePlatformType.prime);
+                        _player = DrmPlayer.creatPlayer(moviePayload: moviePayload, platform: MoviePlatformType.youtube);
                       });                                                    
                     } else {             
-                      _player!.updatePlayer(moviePayload: moviePayload, platform: MoviePlatformType.prime);
+                      _player!.updatePlayer(moviePayload: moviePayload, platform: MoviePlatformType.youtube);
                     }
                   }                       
               }

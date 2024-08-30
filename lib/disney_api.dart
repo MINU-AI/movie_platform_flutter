@@ -2,9 +2,8 @@
 import 'cache_data_manager.dart';
 import 'logger.dart';
 import 'movie_platform_api.dart';
-import 'network_service.dart';
 
-class DisneyApi extends MoviePlatformApi with NetworkService {
+class DisneyApi extends MoviePlatformApi {
   dynamic config;
 
   @override

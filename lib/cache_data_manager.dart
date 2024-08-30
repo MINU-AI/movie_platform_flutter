@@ -19,7 +19,8 @@ enum CacheDataKey {
   disney_api_access_token,
   disney_video_access_token,
   disney_refresh_token,
-  disney_expire_time
+  disney_expire_time,
+  youtube_is_initialize
 }
 
 class _DataCacheManagerImpl extends DataCacheManager {
@@ -41,6 +42,8 @@ class _DataCacheManagerImpl extends DataCacheManager {
       (await prefs).setString(key.name, value as String);
     } else if (value is double) {
       (await prefs).setDouble(key.name, value as double);
+    } else if (value is bool) {
+      (await prefs).setBool(key.name, value);
     } else {
       throw "Unsupported type for caching - $value";
     }

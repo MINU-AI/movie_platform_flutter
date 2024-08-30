@@ -83,6 +83,7 @@ class _PlayerViewState extends State<PlayerView> with PlayerListener {
   
   @override
   void onPlaybackStateChanged(PlayerState state) {
+    widget.player.showControl(false);
     setState(() {
         _showPlayerLoading = state == PlayerState.bufferring;  
       });    
@@ -94,6 +95,10 @@ class _PlayerViewState extends State<PlayerView> with PlayerListener {
         _showPlayerLoading = false;  
         showAlertDialog(title: "Cannot play the movie", content: "${error.errorCodeName} - ${error.message}");
       }); 
+  }
+  
+  @override
+  void onPlayingChange(bool isPlaying) {
   }
 }
 

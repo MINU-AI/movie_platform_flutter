@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:player/assets.dart';
 import 'package:player/prime_web_view.dart';
+import 'package:player/youtube_web_view.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:webview_flutter_wkwebview/webview_flutter_wkwebview.dart';
 
@@ -21,29 +22,38 @@ final Set<Factory<OneSequenceGestureRecognizer>> gestureRecognizers = {
 };
 
 abstract class MovieWebView extends MoviePickerView {
-  final bool isLoggedIn;
   final MoviePlatformType platform;
 
-  const MovieWebView({super.key, required this.isLoggedIn, required this.platform });
+  const MovieWebView({super.key, required this.platform });
 
   factory MovieWebView.create({ required MoviePlatformType platform }) {
     switch(platform) {
       case MoviePlatformType.disney:
-        return DisneyWebView(isLoggedIn: false, platform: platform,);
+        return DisneyWebView( platform: platform,);
         
       case MoviePlatformType.prime:
         return PrimeWebView(isLoggedIn: true, platform: platform);
+      
+      case MoviePlatformType.youtube:
+        return YoutubeWebView(platform: platform);
 
       default:
         throw "Unsupported platform: $platform";
     }
   }
+
+  PlatformState<MovieWebView> get state;
+
+  @override
+  State<StatefulWidget> createState() => state;
+  
 }
 
 abstract class PlatformState< V extends MovieWebView> extends State<V> {
 
   late final WebViewController _controller;
   MoviePlatformApi? _moviePlatformApi;
+  Color _loadingBackgroundColor =  const Color(0x60000000);
 
   MoviePlatformApi get platformApi {
     _moviePlatformApi ??= MoviePlatformApiFactory.create(widget.platform);
@@ -60,8 +70,18 @@ abstract class PlatformState< V extends MovieWebView> extends State<V> {
 
   void popScreen<T>(T result) => Navigator.of(context).pop(result);
 
+  bool get loadUrlAtStartUp => true;
+
+  Map<String, String> get headers => {};
+
   String? get injectedJavascript {
     return null;
+  }
+
+  set loadingBackgroundColor(Color value) {
+    setState(() {
+      _loadingBackgroundColor = value;  
+    });    
   }
 
   abstract final String url;
@@ -76,8 +96,7 @@ abstract class PlatformState< V extends MovieWebView> extends State<V> {
     });
   }
 
-  @override
-  void initState() {
+  void initWebView() {
     late final PlatformWebViewControllerCreationParams params;
     if (WebViewPlatform.instance is WebKitWebViewPlatform) {
       params = WebKitWebViewControllerCreationParams(
@@ -119,8 +138,20 @@ abstract class PlatformState< V extends MovieWebView> extends State<V> {
       ..addJavaScriptChannel("messageHandler", onMessageReceived: (message) {
         onJavascriptReceived(message.message);
       })
-      ..setUserAgent(userAgent)
-      ..loadRequest(Uri.parse(url));
+      ..setUserAgent(userAgent);
+      // ..loadRequest(Uri.parse(url), headers: headers);
+  }
+
+  void loadUrl(String url, { Map<String, String>? headers  }) {
+    _controller.loadRequest(Uri.parse(url), headers: headers ?? {});
+  }
+
+  @override
+  void initState() {
+    initWebView();
+    if(loadUrlAtStartUp) {
+      loadUrl(url, headers: headers);
+    }
 
     super.initState();
   }
@@ -167,7 +198,7 @@ abstract class PlatformState< V extends MovieWebView> extends State<V> {
 
                       Visibility(
                         visible: _showLoading,
-                        child: const LoadingView(),
+                        child: LoadingView(backgroundColor: _loadingBackgroundColor,),
                       ),                      
                     ],
                   )

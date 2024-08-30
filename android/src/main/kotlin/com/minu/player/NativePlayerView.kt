@@ -36,7 +36,7 @@ class NativePlayerView(
         setMethodCallHandler(handleMethodCall)
     }
 
-    private val videoView: PlayerView = PlayerView(context).apply {
+    val videoView: PlayerView = PlayerView(context).apply {
 //        useController = false
         player = createPlayer(creationParams)
     }
@@ -88,6 +88,11 @@ val NativePlayerView.handleMethodCall: MethodChannel.MethodCallHandler
                         player?.setMediaSource(mediaSource, true)
                         player?.prepare()
                     }
+
+                    "showControl" -> {
+                        val show = params["value"] as Boolean
+                        videoView.useController = show
+                    }
                 }
 
                 result.success(true)
@@ -129,6 +134,12 @@ fun NativePlayerView.createPlayer(creationParams: Map<*, *>): Player {
             argument["errorCodeName"] = error.errorCodeName
             argument["message"] = error.message
             methodChannel.invokeMethod(NativeMethodCall.onPlayerError.name, argument )
+        }
+
+        override fun onIsPlayingChanged(isPlaying: Boolean) {
+            val argument = mutableMapOf<String, Any?>()
+            argument["isPlaying"] = isPlaying
+            methodChannel.invokeMethod(NativeMethodCall.onPlayingChange.name, argument)
         }
     })
 
@@ -213,6 +224,20 @@ fun NativePlayerView.createMediaSource(creationParams: Map<*, *>): MediaSource {
 
             return dashMediaSource
         }
+
+        MoviePlatformType.youtube -> {
+            val hlsMediaSource =
+                HlsMediaSource.Factory(manifestDataSourceFactory)
+                    .createMediaSource(
+                        MediaItem.Builder()
+                            .setUri(playBackUrl)
+                            .setMimeType(MimeTypes.APPLICATION_M3U8)
+                            .build()
+                    )
+
+            return hlsMediaSource
+        }
+
         else -> {
             throw RuntimeException("Unimplemented player for movie platform: $moviePlatformType")
         }

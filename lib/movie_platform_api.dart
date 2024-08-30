@@ -1,9 +1,11 @@
 
+import 'package:player/network_service.dart';
 import 'package:player/prime_api.dart';
+import 'package:player/youtube_api.dart';
 
 import 'disney_api.dart';
 
-abstract class MoviePlatformApi {
+abstract class MoviePlatformApi with NetworkService {
   Future<MovieInfo> getMovieInfo(String movieId);
 
   Future<MoviePlayback> getPlaybackUrl(List<dynamic> params);
@@ -12,11 +14,12 @@ abstract class MoviePlatformApi {
 
   Future<dynamic> refreshToken();
 
-  dynamic get metadata => {};
+  Map<String, dynamic> get metadata => {};
 
 }
 
 enum MoviePlatformType {
+  youtube,
   disney,
   prime;
 
@@ -26,6 +29,8 @@ enum MoviePlatformType {
         return disney;
       case "prime":
         return prime;
+      case "youtube":
+        return youtube;
       default:
         throw "Unsupported platform type: $value";
     }
@@ -91,6 +96,9 @@ class MoviePlatformApiFactory {
         return DisneyApi();
       case MoviePlatformType.prime:
         return PrimeApi();
+      case MoviePlatformType.youtube:
+        return YoutubeApi();
+
       default:
         throw "Unsupported plaform type: $type";
     }

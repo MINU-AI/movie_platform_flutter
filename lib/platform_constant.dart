@@ -15,6 +15,7 @@ enum NativeMethodCall {
   refreshToken, 
   onPlaybackStateChanged,
   onPlayerError,
+  onPlayingChange,
   controlPlayer;
 
   static NativeMethodCall fromString(String methodName) {
@@ -25,6 +26,8 @@ enum NativeMethodCall {
         return onPlaybackStateChanged;
       case "onPlayerError":
         return onPlayerError;
+      case "onPlayingChange":
+        return onPlayingChange;
       default:
         throw "Unsupported method call :$methodName";
     }
@@ -36,5 +39,6 @@ enum PlayerControlAction {
   pause,
   seek,
   stop,
+  showControl,
   changePlayback
 }

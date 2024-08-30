@@ -48,6 +48,8 @@ abstract class DrmPlayer {
 
   void play();
 
+  void showControl(bool show);
+
   void addListener(PlayerListener listener) {
     if(!_listeners.contains(listener)) {
       _listeners.add(listener);
@@ -64,6 +66,8 @@ mixin PlayerListener {
   void onPlaybackStateChanged(PlayerState state);
 
   void onPlayerError(PlayerError error);
+
+  void onPlayingChange(bool isPlaying);
 }
 
 class _WideVinePlayer extends DrmPlayer {
@@ -91,6 +95,11 @@ class _WideVinePlayer extends DrmPlayer {
   void stop() {
     channel.invokeMethod(NativeMethodCall.controlPlayer.name, { "action" : PlayerControlAction.stop.name });
   }
+
+  @override
+  void showControl(bool show) {
+    channel.invokeMethod(NativeMethodCall.controlPlayer.name, { "action" : PlayerControlAction.showControl.name, "value" : show });
+  }
   
   Future<dynamic> _handleMethodCall(MethodCall call) async {
     final nativeCall = NativeMethodCall.fromString(call.method);
@@ -113,6 +122,14 @@ class _WideVinePlayer extends DrmPlayer {
         final error = PlayerError.fromJson(call.arguments);
         for(final listener in _listeners) {
           listener.onPlayerError(error);
+        }
+      
+      case NativeMethodCall.onPlayingChange:
+        final data = call.arguments;
+        final isPlaying = data["isPlaying"] as bool;
+        logger.i("onPlayingChange: $isPlaying");
+        for(final listener in _listeners) {
+          listener.onPlayingChange(isPlaying);
         }
         
       default:

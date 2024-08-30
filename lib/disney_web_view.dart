@@ -1,6 +1,5 @@
 import 'dart:convert';
 
-import 'package:flutter/cupertino.dart';
 import 'package:player/extension.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
@@ -10,10 +9,10 @@ import 'movie_platform_api.dart';
 import 'movie_web_view.dart';
 
 class DisneyWebView extends MovieWebView {
-  const DisneyWebView({super.key, required super.isLoggedIn, required super.platform });
+  const DisneyWebView({super.key, required super.platform });
 
   @override
-  State<StatefulWidget> createState() => _DisneyState();
+  PlatformState<MovieWebView> get state => _DisneyState();
 }
 
 class _DisneyState extends PlatformState<DisneyWebView> {

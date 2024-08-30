@@ -1,6 +1,5 @@
 import 'dart:convert';
 
-import 'package:flutter/widgets.dart';
 import 'package:html/dom.dart';
 import 'package:html/parser.dart';
 import 'package:player/logger.dart';
@@ -12,10 +11,11 @@ import 'package:collection/collection.dart';
 import 'extension.dart';
 
 class PrimeWebView extends MovieWebView {
-  const PrimeWebView({super.key, required super.isLoggedIn, required super.platform});
+  final bool isLoggedIn;
+  const PrimeWebView({super.key, required this.isLoggedIn, required super.platform });
 
   @override
-  State<StatefulWidget> createState() => _PrimeState();
+  PlatformState<MovieWebView> get state => _PrimeState();
   
 }
 
