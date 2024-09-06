@@ -50,7 +50,7 @@ abstract class DrmPlayer {
 
   void showControl(bool show);
 
-  Future<int?> get getDuration => channel.invokeMethod(MethodCalls.getDuration.name);
+  Future<int?> get duration => channel.invokeMethod(MethodCalls.getDuration.name);
 
   Future<int?> get currentPosition => channel.invokeMethod(MethodCalls.getCurrentPosition.name);
 

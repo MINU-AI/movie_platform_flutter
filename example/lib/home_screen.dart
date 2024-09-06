@@ -19,6 +19,8 @@ class _HomeState extends State<HomeScreen> {
     MoviePlayback(playbackUrl: "https://vod-akc-na-east-1.media.dssott.com/dvt1=exp=1724732385~url=%2Fps01%2Fdisney%2F8f262fdd-5850-46cb-9a93-5217e0dbd0c8%2F~aid=f3a97c05-5882-48c6-b512-800c7cd73d58~did=b0fcde28-b4fc-4452-97d2-30018b4fe4db~kid=k01~hmac=7c1eebab34e6fd766b86b7c1c3d5943b4481631815330d6bc6fe452dbce2dff3/ps01/disney/8f262fdd-5850-46cb-9a93-5217e0dbd0c8/ctr-all-b529f023-84bc-4d8d-9281-17228e038781-f0fd9dcd-bdb6-49b7-b723-e3614efeac68.m3u8?a=3&v=1&hash=5db04df3a9a939a6c0610b41e04fca56eed9b533", licenseKeyUrl: "https://disney.playback.edge.bamgrid.com/widevine/v1/obtain-license", licenseCertificateUrl: "https://playback-certs.bamgrid.com/static/v1.0/widevine.bin")
   ];
 
+  final platform = MoviePlatform.youtube;
+
   @override
   Widget build(BuildContext context) {
     final screenWidth =  MediaQuery.of(context).size.width;
@@ -67,7 +69,7 @@ class _HomeState extends State<HomeScreen> {
 
           GestureDetector(
           onTap: () {
-            final pickerView = MoviePickerView.createView(MoviePlatform.hulu);
+            final pickerView = MoviePickerView.createView(platform);
 
             Navigator.of(context).push(CupertinoPageRoute(builder: (_) => pickerView)).then(
               (value) async {           
@@ -75,10 +77,10 @@ class _HomeState extends State<HomeScreen> {
                   if(moviePayload != null) {
                     if(_player == null) {              
                       setState(() {
-                        _player = DrmPlayer.creatPlayer(payload: moviePayload, platform: MoviePlatform.hulu);
+                        _player = DrmPlayer.creatPlayer(payload: moviePayload, platform: platform);
                       });                                                    
                     } else {             
-                      _player!.updatePlayer(payload: moviePayload, platform: MoviePlatform.hulu);
+                      _player!.updatePlayer(payload: moviePayload, platform: platform);
                     }
                   }                       
               }

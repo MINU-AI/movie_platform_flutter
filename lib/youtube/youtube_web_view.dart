@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:player/logger.dart';
 import 'package:player/movie_platform_api.dart';
 import 'package:player/movie_web_view.dart';
-import 'package:webview_flutter_platform_interface/src/types/url_change.dart';
 
 class YoutubeWebView extends MovieWebView {
   const YoutubeWebView({super.key, required super.platform });

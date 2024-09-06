@@ -79,8 +79,8 @@ val NativePlayerView.handleMethodCall: MethodChannel.MethodCallHandler
                     }
 
                     "seek" -> {
-                        val value = params["value"] as Long
-                        player?.seekTo(value)
+                        val value = params["value"] as Int
+                        player?.seekTo(value.toLong())
                     }
 
                     "changePlayback" -> {
