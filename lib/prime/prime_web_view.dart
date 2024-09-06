@@ -8,7 +8,7 @@ import 'package:player/player.dart';
 import 'package:webview_cookie_manager/webview_cookie_manager.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:collection/collection.dart';
-import 'extension.dart';
+import '../extension.dart';
 
 class PrimeWebView extends MovieWebView {
   final bool isLoggedIn;
@@ -40,12 +40,7 @@ class _PrimeState extends PlatformState<PrimeWebView> {
     """;
 
     @override
-  void onUrlChange(UrlChange urlChange) {
-    final url = urlChange.url;
-    if(url == null) {
-      return;
-    }
-    logger.i("onUrlChange: $url");
+  void onUrlChange(String url) {    
     final uri = Uri.parse(url);
     final pathSegments = uri.pathSegments;
     if(pathSegments.contains("video") && pathSegments.contains("detail")) {

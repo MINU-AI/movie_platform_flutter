@@ -1,7 +1,7 @@
 package com.minu.player
 
 enum class PlatformViewType {
-    widevine_player
+    widevinePlayer
 }
 
 class PlatformViewParams {
@@ -13,11 +13,11 @@ class PlatformViewParams {
     }
 }
 
-enum class MoviePlatformType {
+enum class MoviePlatform {
     youtube, disney, prime, hulu;
 
     companion object  {
-        fun fromString(platformId: String): MoviePlatformType {
+        fun fromString(platformId: String): MoviePlatform {
             return when(platformId) {
                 youtube.name -> youtube
                 disney.name -> disney
@@ -29,18 +29,22 @@ enum class MoviePlatformType {
     }
 }
 
-enum class NativeMethodCall {
+enum class MethodCalls {
     refreshToken,
     onPlaybackStateChanged,
     onPlayerError,
     onPlayingChange,
+    getDuration,
+    getCurrentPosition,
     controlPlayer;
 
     companion object {
-        fun fromString(value: String): NativeMethodCall {
+        fun fromString(value: String): MethodCalls {
             return when(value) {
                 refreshToken.name -> refreshToken
                 controlPlayer.name -> controlPlayer
+                getDuration.name -> getDuration
+                getCurrentPosition.name -> getCurrentPosition
                 else -> throw RuntimeException("Unsupported platformId: $value")
             }
         }

@@ -13,7 +13,6 @@ import androidx.media3.datasource.HttpDataSource
 import androidx.media3.datasource.HttpDataSource.InvalidResponseCodeException
 import androidx.media3.datasource.StatsDataSource
 import androidx.media3.exoplayer.drm.ExoMediaDrm
-import androidx.media3.exoplayer.drm.MediaDrmCallback
 import androidx.media3.exoplayer.drm.MediaDrmCallbackException
 import com.google.common.io.ByteStreams
 import io.flutter.plugin.common.BinaryMessenger
@@ -79,7 +78,7 @@ class DisneyDrmCallback(
                     401 -> {
                         token = ""
                         Handler(Looper.getMainLooper()).post {
-                            MethodChannel(binaryMessenger, platformChannel).invokeMethod(NativeMethodCall.refreshToken.name, MoviePlatformType.disney.name, object: MethodChannel.Result {
+                            MethodChannel(binaryMessenger, platformChannel).invokeMethod(MethodCalls.refreshToken.name, MoviePlatform.disney.name, object: MethodChannel.Result {
                                 override fun success(result: Any?) {
                                     Log.i(TAG, "Call native method succeeded: $result")
                                     (result as String?)?.let { newToken ->

@@ -6,19 +6,25 @@ import 'package:http/http.dart' as http;
 import 'logger.dart';
 
 mixin NetworkService {
-  Future<dynamic> get(String url, { Map<String, String>? headers, Map<String, String>? params }) async {
+  Future<dynamic> get(String url, { Map<String, String>? headers, Map<String, String>? params, parseResponseBody = true }) async {
     var combineUrl = Uri.parse(url).replace(queryParameters: params).toString();
     _logRequest(combineUrl, headers: headers);
     final response = await http.get(Uri.parse(combineUrl), headers: headers);
-    return _parseBody(response);
+    if (parseResponseBody) {
+      return _parseBody(response);
+    }
+    return response.body;
   }
 
-  Future<dynamic> post(String url, { Map<String, String>? headers, dynamic body }) async {
+  Future<dynamic> post(String url, { Map<String, String>? headers, dynamic body, parseBodyToJson = true }) async {
     _logRequest(url, headers: headers, body: body);
 
-    var modifiedBody = body != null ? jsonEncode(body) : null;
+    var jsonBody = body != null ? (parseBodyToJson ? jsonEncode(body) : body) : null;
+    if(parseBodyToJson) {
+      headers?.addAll({ "Content-Type" : "application/json"});
+    }
 
-    final response = await http.post(Uri.parse(url), headers: headers, body: modifiedBody);
+    final response = await http.post(Uri.parse(url), headers: headers, body: jsonBody);
     return _parseBody(response);
   }
 

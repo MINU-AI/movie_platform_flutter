@@ -26,6 +26,6 @@ Route<dynamic> generateRoute(RouteSettings settings) {
     case RouteNames.home:
       return CupertinoPageRoute(builder: (_) => const HomeScreen());
     case RouteNames.disney_web_view:
-      return CupertinoPageRoute(builder: (_) => MoviePickerView.createView(MoviePlatformType.disney));  
+      return CupertinoPageRoute(builder: (_) => MoviePickerView.createView(MoviePlatform.disney));  
   }
 }

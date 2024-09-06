@@ -1,5 +1,5 @@
 enum PlatformViewType {
-  widevine_player
+  widevinePlayer
 }
 
 enum PlatformViewParams {
@@ -11,14 +11,16 @@ enum PlatformViewParams {
 
 const platformChannel = "com.minu.player/channel";
 
-enum NativeMethodCall {
+enum MethodCalls {
   refreshToken, 
   onPlaybackStateChanged,
   onPlayerError,
   onPlayingChange,
+  getDuration,
+  getCurrentPosition,
   controlPlayer;
 
-  static NativeMethodCall fromString(String methodName) {
+  static MethodCalls fromString(String methodName) {
     switch(methodName) {
       case "refreshToken":
         return refreshToken;
@@ -28,6 +30,10 @@ enum NativeMethodCall {
         return onPlayerError;
       case "onPlayingChange":
         return onPlayingChange;
+      case "getDuration":
+        return getDuration;
+      case "getCurrentPosition":
+        return getCurrentPosition;
       default:
         throw "Unsupported method call :$methodName";
     }

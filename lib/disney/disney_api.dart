@@ -1,7 +1,7 @@
 
-import 'cache_data_manager.dart';
-import 'logger.dart';
-import 'movie_platform_api.dart';
+import '../cache_data_manager.dart';
+import '../logger.dart';
+import '../movie_platform_api.dart';
 
 class DisneyApi extends MoviePlatformApi {
   dynamic config;

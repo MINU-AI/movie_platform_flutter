@@ -1,8 +1,6 @@
 import 'dart:async';
 
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:player/cache_data_manager.dart';
 import 'package:player/logger.dart';
 import 'package:player/movie_platform_api.dart';
 import 'package:player/movie_web_view.dart';
@@ -17,9 +15,6 @@ class YoutubeWebView extends MovieWebView {
 }
 
 class _YoutubeState extends PlatformState<YoutubeWebView> {
-  var _loadHomeCount = 0;
-  var _finishInitiation = false;
-  final sampleUrl = "https://m.youtube.com/watch?v=EngW7tLk6R8&pp=ygUSc2hvcnQgc2FtcGxlIHZpZGVv";
 
   @override
   String get url => "https://m.youtube.com/";
@@ -37,13 +32,7 @@ class _YoutubeState extends PlatformState<YoutubeWebView> {
   }
 
   @override
-  Future<void> onUrlChange(UrlChange urlChange) async {
-    final url = urlChange.url;
-    if(url == null || !_finishInitiation) {
-      return;
-    }
-
-    logger.i("onUrlChange: $url");
+  Future<void> onUrlChange(String url) async {        
     if(url.contains("/watch")) {
       final uri = Uri.parse(url);
       final watchId = uri.queryParameters["v"];
@@ -68,40 +57,12 @@ class _YoutubeState extends PlatformState<YoutubeWebView> {
 
   @override
   Future<void> onPageFinished(String url)  async {
-    toggleLoading(false);
-    if(url == sampleUrl) {
-      toggleLoading(true);
-      Timer(const Duration(seconds: 3), () async {
-        await runJavascript("document.getElementsByClassName('mobile-topbar-header-endpoint')[0].click()");
-        dataCacheManager.cache(CacheDataKey.youtube_is_initialize, true);   
-        _finishInitiation = true;              
-      });
-    } else if(url == this.url) {
-      const jsCode = """
-                     document.getElementsByClassName("feed-nudge-text-container").length == 1;                                        
-                  """;
-      final isEmpty = await runJavaScriptReturningResult(jsCode) as bool;
-      logger.i("Got result: $isEmpty");
-      if(isEmpty && _loadHomeCount <= 5) {
-        _loadHomeCount++;
-        loadUrl(url);      
-      } else {
-        toggleLoading(false);
-      }
-      
-    }
   }
   
 }
 
 extension on _YoutubeState {
   void loadWebView() async {
-    final isInitialized = (await dataCacheManager.get(CacheDataKey.youtube_is_initialize) ?? false);
-    _finishInitiation = isInitialized;
-    if(!isInitialized) {
-       loadingBackgroundColor = const Color(0xFF000000);
-       toggleLoading(true);
-    }
-    loadUrl(isInitialized ? url : sampleUrl);
+    loadUrl(url);
   }
 }

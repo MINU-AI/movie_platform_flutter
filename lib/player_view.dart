@@ -9,7 +9,7 @@ import 'drmplayer.dart';
 import 'platform_constant.dart';
 
 abstract class PlayerView extends StatefulWidget {
-  final PlatformViewType viewType = PlatformViewType.widevine_player;
+  final PlatformViewType viewType = PlatformViewType.widevinePlayer;
   final DrmPlayer player;
 
   const PlayerView({super.key, required this.player });

@@ -1,6 +1,7 @@
 package com.minu.player
 
 import android.content.Context
+import android.net.Uri
 import android.view.View
 import androidx.annotation.OptIn
 import androidx.media3.common.C
@@ -10,6 +11,7 @@ import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DefaultHttpDataSource
+import androidx.media3.datasource.FileDataSource
 import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.dash.DashMediaSource
@@ -28,7 +30,6 @@ import io.flutter.plugin.platform.PlatformView
 class NativePlayerView(
     val context: Context,
     val binaryMessenger: BinaryMessenger,
-    val id: Int,
     private val creationParams: Map<*, *>
 ) :
     PlatformView {
@@ -58,9 +59,9 @@ class NativePlayerView(
 val NativePlayerView.handleMethodCall: MethodChannel.MethodCallHandler
     @OptIn(UnstableApi::class)
     get() = MethodChannel.MethodCallHandler { call, result ->
-        val method = NativeMethodCall.fromString(call.method)
+        val method = MethodCalls.fromString(call.method)
         when(method) {
-            NativeMethodCall.controlPlayer -> {
+            MethodCalls.controlPlayer -> {
                 val params = call.arguments as Map<*, *>
                 val action = params["action"] as String
 
@@ -97,6 +98,23 @@ val NativePlayerView.handleMethodCall: MethodChannel.MethodCallHandler
 
                 result.success(true)
             }
+
+            MethodCalls.getDuration -> {
+                if(player == null) {
+                    result.error("player_err", "The player is not initialized", null)
+                    return@MethodCallHandler
+                }
+                result.success(player!!.duration)
+            }
+
+            MethodCalls.getCurrentPosition -> {
+                if(player == null) {
+                    result.error("player_err", "The player is not initialized", null)
+                    return@MethodCallHandler
+                }
+                result.success(player?.currentPosition)
+            }
+
             else -> {
                 result.notImplemented()
             }
@@ -124,7 +142,7 @@ fun NativePlayerView.createPlayer(creationParams: Map<*, *>): Player {
     player.addListener(object: Player.Listener {
         override fun onPlaybackStateChanged(playbackState: Int) {
             super.onPlaybackStateChanged(playbackState)
-            methodChannel.invokeMethod(NativeMethodCall.onPlaybackStateChanged.name, playbackState)
+            methodChannel.invokeMethod(MethodCalls.onPlaybackStateChanged.name, playbackState)
         }
 
         override fun onPlayerError(error: PlaybackException) {
@@ -133,14 +151,15 @@ fun NativePlayerView.createPlayer(creationParams: Map<*, *>): Player {
             argument["errorCode"] = error.errorCode
             argument["errorCodeName"] = error.errorCodeName
             argument["message"] = error.message
-            methodChannel.invokeMethod(NativeMethodCall.onPlayerError.name, argument )
+            methodChannel.invokeMethod(MethodCalls.onPlayerError.name, argument )
         }
 
         override fun onIsPlayingChanged(isPlaying: Boolean) {
             val argument = mutableMapOf<String, Any?>()
             argument["isPlaying"] = isPlaying
-            methodChannel.invokeMethod(NativeMethodCall.onPlayingChange.name, argument)
+            methodChannel.invokeMethod(MethodCalls.onPlayingChange.name, argument)
         }
+
     })
 
 
@@ -155,7 +174,7 @@ fun NativePlayerView.createPlayer(creationParams: Map<*, *>): Player {
 fun NativePlayerView.createMediaSource(creationParams: Map<*, *>): MediaSource {
     val platformIdValue = creationParams[PlatformViewParams.platformId] as String
     val playBackUrl: String =  creationParams[PlatformViewParams.playbackUrl] as String
-    val moviePlatformType = MoviePlatformType.fromString(platformIdValue)
+    val moviePlatform = MoviePlatform.fromString(platformIdValue)
     val licenseKeyUrl = creationParams[PlatformViewParams.licenseUrl] as String?
     val metadata = creationParams[PlatformViewParams.metadata] as Map<*, *>
 
@@ -171,8 +190,8 @@ fun NativePlayerView.createMediaSource(creationParams: Map<*, *>): MediaSource {
 
     val manifestDataSourceFactory = DefaultHttpDataSource.Factory()
 
-    when(moviePlatformType) {
-        MoviePlatformType.disney -> {
+    when(moviePlatform) {
+        MoviePlatform.disney -> {
             val token = metadata["token"] as String
             val disneyMediaDrmCallback = DisneyDrmCallback(binaryMessenger, licenseKeyUrl!!, dataSourceFactory, token)
             val drmSessionManager = DefaultDrmSessionManager.Builder().build(disneyMediaDrmCallback)
@@ -197,7 +216,7 @@ fun NativePlayerView.createMediaSource(creationParams: Map<*, *>): MediaSource {
             return hlsMediaSource
         }
 
-        MoviePlatformType.prime -> {
+        MoviePlatform.prime -> {
             val movieId = metadata["movieId"] as String
             val deviceId = metadata["deviceId"] as String
             val mid = metadata["mid"] as String
@@ -225,7 +244,7 @@ fun NativePlayerView.createMediaSource(creationParams: Map<*, *>): MediaSource {
             return dashMediaSource
         }
 
-        MoviePlatformType.youtube -> {
+        MoviePlatform.youtube -> {
             val hlsMediaSource =
                 HlsMediaSource.Factory(manifestDataSourceFactory)
                     .createMediaSource(
@@ -238,8 +257,30 @@ fun NativePlayerView.createMediaSource(creationParams: Map<*, *>): MediaSource {
             return hlsMediaSource
         }
 
+        MoviePlatform.hulu -> {
+            val fileSourceFactory = FileDataSource.Factory()
+            val dashChunkSourceFactory = DefaultDashChunkSource.Factory(dataSourceFactory)
+            val token = metadata["token"] as String
+            val dashMediaSource = DashMediaSource.Factory(dashChunkSourceFactory, fileSourceFactory)
+                .createMediaSource(
+                    MediaItem.Builder()
+                        .setUri(playBackUrl)
+                        // DRM Configuration
+                        .setDrmConfiguration(
+                            MediaItem.DrmConfiguration.Builder(drmSchemeUuid)
+                                .setLicenseUri(licenseKeyUrl)
+                                .setLicenseRequestHeaders(mapOf("Authorization" to "Bearer $token"))
+                                .build()
+                        )
+                        .setMimeType(MimeTypes.APPLICATION_MPD)
+                        .build()
+                )
+
+            return dashMediaSource
+        }
+
         else -> {
-            throw RuntimeException("Unimplemented player for movie platform: $moviePlatformType")
+            throw RuntimeException("Unimplemented player for movie platform: $moviePlatform")
         }
     }
 }

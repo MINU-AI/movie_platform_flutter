@@ -11,4 +11,20 @@ extension Common on String {
     return String.fromCharCode(int.parse(match.group(0)!.substring(2), radix: 16));
   });
   }
+
+  String parseUuidWithoutDashes() {
+  // Ensure the string has the correct length for a UUID (32 characters)
+  if (length != 32) {
+    throw const FormatException('Invalid UUID format: the string must have 32 characters.');
+  }
+
+  // Insert dashes at the correct positions
+  final uuidWithDashes = '${substring(0, 8)}-'
+      '${substring(8, 12)}-'
+      '${substring(12, 16)}-'
+      '${substring(16, 20)}-'
+      '${substring(20, 32)}';
+
+  return uuidWithDashes;
+}
 }

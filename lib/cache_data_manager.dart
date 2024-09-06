@@ -20,7 +20,10 @@ enum CacheDataKey {
   disney_video_access_token,
   disney_refresh_token,
   disney_expire_time,
-  youtube_is_initialize
+  youtube_is_initialize,
+  hulu_access_token,
+  hulu_device_token,
+  hulu_expire_time,
 }
 
 class _DataCacheManagerImpl extends DataCacheManager {

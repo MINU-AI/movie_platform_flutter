@@ -67,7 +67,7 @@ class _HomeState extends State<HomeScreen> {
 
           GestureDetector(
           onTap: () {
-            final pickerView = MoviePickerView.createView(MoviePlatformType.youtube);
+            final pickerView = MoviePickerView.createView(MoviePlatform.hulu);
 
             Navigator.of(context).push(CupertinoPageRoute(builder: (_) => pickerView)).then(
               (value) async {           
@@ -75,10 +75,10 @@ class _HomeState extends State<HomeScreen> {
                   if(moviePayload != null) {
                     if(_player == null) {              
                       setState(() {
-                        _player = DrmPlayer.creatPlayer(moviePayload: moviePayload, platform: MoviePlatformType.youtube);
+                        _player = DrmPlayer.creatPlayer(payload: moviePayload, platform: MoviePlatform.hulu);
                       });                                                    
                     } else {             
-                      _player!.updatePlayer(moviePayload: moviePayload, platform: MoviePlatformType.youtube);
+                      _player!.updatePlayer(payload: moviePayload, platform: MoviePlatform.hulu);
                     }
                   }                       
               }

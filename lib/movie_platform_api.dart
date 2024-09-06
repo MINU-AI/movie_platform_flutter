@@ -1,9 +1,11 @@
 
+import 'package:player/cache_data_manager.dart';
+import 'package:player/hulu/hulu_api.dart';
 import 'package:player/network_service.dart';
-import 'package:player/prime_api.dart';
-import 'package:player/youtube_api.dart';
+import 'package:player/prime/prime_api.dart';
+import 'package:player/youtube/youtube_api.dart';
 
-import 'disney_api.dart';
+import 'disney/disney_api.dart';
 
 abstract class MoviePlatformApi with NetworkService {
   Future<MovieInfo> getMovieInfo(String movieId);
@@ -16,14 +18,35 @@ abstract class MoviePlatformApi with NetworkService {
 
   Map<String, dynamic> get metadata => {};
 
+  MoviePlatformApi();
+
+  final cacheManager = dataCacheManager;
+
+  factory MoviePlatformApi.create(MoviePlatform platform) {
+    switch(platform) {
+      case MoviePlatform.disney:
+        return DisneyApi();
+      case MoviePlatform.prime:
+        return PrimeApi();
+      case MoviePlatform.youtube:
+        return YoutubeApi();
+      case MoviePlatform.hulu:
+        return HuluApi();
+
+      default:
+        throw "Unsupported plaform type: $platform";
+    }
+  }
+
 }
 
-enum MoviePlatformType {
+enum MoviePlatform {
   youtube,
   disney,
+  hulu,
   prime;
 
-  static MoviePlatformType fromString(String value) {
+  static MoviePlatform fromString(String value) {
     switch(value) {
       case "disney":
         return disney;
@@ -31,6 +54,8 @@ enum MoviePlatformType {
         return prime;
       case "youtube":
         return youtube;
+      case "hulu":
+        return hulu;
       default:
         throw "Unsupported platform type: $value";
     }
@@ -87,21 +112,4 @@ class MoviePayload {
   MoviePayload({required this.playback, required this.info, required this.metadata});
 }
 
-class MoviePlatformApiFactory {
-  MoviePlatformApiFactory._();
-
-  static MoviePlatformApi create(MoviePlatformType type) {
-    switch(type) {
-      case MoviePlatformType.disney:
-        return DisneyApi();
-      case MoviePlatformType.prime:
-        return PrimeApi();
-      case MoviePlatformType.youtube:
-        return YoutubeApi();
-
-      default:
-        throw "Unsupported plaform type: $type";
-    }
-  }
-}
 

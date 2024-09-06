@@ -1,12 +1,11 @@
 import 'dart:convert';
 
 import 'package:player/extension.dart';
-import 'package:webview_flutter/webview_flutter.dart';
 
-import 'cache_data_manager.dart';
-import 'logger.dart';
-import 'movie_platform_api.dart';
-import 'movie_web_view.dart';
+import '../cache_data_manager.dart';
+import '../logger.dart';
+import '../movie_platform_api.dart';
+import '../movie_web_view.dart';
 
 class DisneyWebView extends MovieWebView {
   const DisneyWebView({super.key, required super.platform });
@@ -18,24 +17,14 @@ class DisneyWebView extends MovieWebView {
 class _DisneyState extends PlatformState<DisneyWebView> {
 
   @override
-  MoviePlatformApi get platformApi => MoviePlatformApiFactory.create(MoviePlatformType.disney);
-
-  @override
   String? get userAgent => "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Safari/537.36";
   
   @override
   String get url => "https://www.disneyplus.com/login";
 
   @override
-  void onUrlChange(UrlChange url) async {
-    final urlString = url.url;
-    logger.i("onUrlChange: $urlString");
-    if(urlString == null) {
-      logger.e("onUrlChange null and ignore this case");
-      return;
-    }
-
-    if(urlString.endsWith("/select-profile")) {
+  void onUrlChange(String url) async {    
+    if(url.endsWith("/select-profile")) {
        const jsCode = """
                       let profileElement = document.querySelector("[data-testid^='profile-avatar-']");
                       var profileId = profileElement.getAttribute("data-gv2elementvalue");
@@ -54,9 +43,9 @@ class _DisneyState extends PlatformState<DisneyWebView> {
           logger.e("switchProfile error: $e");
         }
       }
-    } else if(urlString.contains("/play/")) {
+    } else if(url.contains("/play/")) {
       toggleLoading(true);
-      final uri = Uri.parse(urlString);
+      final uri = Uri.parse(url);
       final contentId = uri.pathSegments.isNotEmpty ? uri.pathSegments.last : null;
       logger.i("Get contentId from uri: $contentId");
       if(contentId != null) { 

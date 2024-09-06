@@ -5,12 +5,13 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:player/assets.dart';
-import 'package:player/prime_web_view.dart';
-import 'package:player/youtube_web_view.dart';
+import 'package:player/hulu/hulu_web_view.dart';
+import 'package:player/prime/prime_web_view.dart';
+import 'package:player/youtube/youtube_web_view.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:webview_flutter_wkwebview/webview_flutter_wkwebview.dart';
 
-import 'disney_web_view.dart';
+import 'disney/disney_web_view.dart';
 import 'loading_view.dart';
 import 'logger.dart';
 import 'movie_picker.dart';
@@ -22,20 +23,23 @@ final Set<Factory<OneSequenceGestureRecognizer>> gestureRecognizers = {
 };
 
 abstract class MovieWebView extends MoviePickerView {
-  final MoviePlatformType platform;
+  final MoviePlatform platform;
 
   const MovieWebView({super.key, required this.platform });
 
-  factory MovieWebView.create({ required MoviePlatformType platform }) {
+  factory MovieWebView.create({ required MoviePlatform platform }) {
     switch(platform) {
-      case MoviePlatformType.disney:
+      case MoviePlatform.disney:
         return DisneyWebView( platform: platform,);
         
-      case MoviePlatformType.prime:
+      case MoviePlatform.prime:
         return PrimeWebView(isLoggedIn: true, platform: platform);
       
-      case MoviePlatformType.youtube:
+      case MoviePlatform.youtube:
         return YoutubeWebView(platform: platform);
+      
+      case MoviePlatform.hulu:
+        return HuluWebView(platform: platform);
 
       default:
         throw "Unsupported platform: $platform";
@@ -56,11 +60,11 @@ abstract class PlatformState< V extends MovieWebView> extends State<V> {
   Color _loadingBackgroundColor =  const Color(0x60000000);
 
   MoviePlatformApi get platformApi {
-    _moviePlatformApi ??= MoviePlatformApiFactory.create(widget.platform);
+    _moviePlatformApi ??= MoviePlatformApi.create(widget.platform);
     return _moviePlatformApi!;
   }
 
-  void onUrlChange(UrlChange urlChange) {}
+  void onUrlChange(String url) {}
 
   void onPageStarted(String url) {}
 
@@ -88,10 +92,17 @@ abstract class PlatformState< V extends MovieWebView> extends State<V> {
 
   bool _showLoading = false;
 
+  var _isDisposed = false;
+
   String? get userAgent => "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/101.0.4951.54 Safari/537.36";
 
+  late final WeakReference<PlatformState<V>> _weakSelf;
+
   void toggleLoading(bool value) {
-    setState(() {
+    if(_isDisposed) {
+        return;
+    }
+    setState(() {      
       _showLoading = value;
     });
   }
@@ -115,17 +126,24 @@ abstract class PlatformState< V extends MovieWebView> extends State<V> {
       ..setNavigationDelegate(
         NavigationDelegate(
           onProgress: (int progress) {},
-          onUrlChange: onUrlChange,
+          onUrlChange: (url) {
+            logger.i("onUrlChange: ${url.url}");
+            final urlString = url.url;
+            if(urlString == null) {
+              return;
+            }
+            _weakSelf.target?.onUrlChange(urlString);
+          },
           onPageStarted: (url) {
             logger.i("onPageStarted: $url");   
             if(injectedJavascript != null) {
               runJavascript(injectedJavascript!);
             }         
-            onPageStarted(url);
+            _weakSelf.target?.onPageStarted(url);
           },
           onPageFinished: (url) {
             logger.i("onPageFinished: $url");                       
-            onPageFinished(url);
+            _weakSelf.target?.onPageFinished(url);
           },
           onWebResourceError: (WebResourceError error) {
             logger.e(error);
@@ -152,8 +170,15 @@ abstract class PlatformState< V extends MovieWebView> extends State<V> {
     if(loadUrlAtStartUp) {
       loadUrl(url, headers: headers);
     }
+    _weakSelf = WeakReference(this);
 
     super.initState();
+  }
+
+  @override
+  void dispose() {
+    _isDisposed = true;
+    super.dispose();
   }
 
   @override

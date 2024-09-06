@@ -8,7 +8,7 @@ class PlayerPlugin: FlutterPlugin {
   override fun onAttachedToEngine(flutterPluginBinding: FlutterPlugin.FlutterPluginBinding) {
     flutterPluginBinding
       .platformViewRegistry
-      .registerViewFactory(PlatformViewType.widevine_player.name, NativePlayerViewFactory(flutterPluginBinding.binaryMessenger))
+      .registerViewFactory(PlatformViewType.widevinePlayer.name, NativePlayerViewFactory(flutterPluginBinding.binaryMessenger))
   }
 
 
