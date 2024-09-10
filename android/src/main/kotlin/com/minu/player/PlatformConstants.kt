@@ -36,6 +36,9 @@ enum class MethodCalls {
     onPlayingChange,
     getDuration,
     getCurrentPosition,
+    getBufferedPosition,
+    getBufferedPercentage,
+    setBrightness,
     controlPlayer;
 
     companion object {
@@ -45,6 +48,9 @@ enum class MethodCalls {
                 controlPlayer.name -> controlPlayer
                 getDuration.name -> getDuration
                 getCurrentPosition.name -> getCurrentPosition
+                getBufferedPercentage.name -> getBufferedPercentage
+                getBufferedPosition.name -> getBufferedPosition
+                setBrightness.name -> setBrightness
                 else -> throw RuntimeException("Unsupported platformId: $value")
             }
         }

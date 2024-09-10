@@ -22,6 +22,7 @@ dependencies:
   webview_cookie_manager: ^2.0.6
   xml: ^6.5.0
   path_provider: ^2.1.4
+  volume_controller: ^2.0.8
 
 dev_dependencies:
   flutter_test:
@@ -53,6 +54,7 @@ flutter:
   
   assets:
     - assets/images/
+    - assets/fonts/
   #
   # For details regarding assets in packages, see
   # https://flutter.dev/to/asset-from-package
@@ -65,10 +67,10 @@ flutter:
   # "family" key with the font family name, and a "fonts" key with a
   # list giving the asset and other descriptors for the font. For
   # example:
-  # fonts:
-  #   - family: Schyler
-  #     fonts:
-  #       - asset: fonts/Schyler-Regular.ttf
+  fonts:
+    - family: OpenSans
+      fonts:
+        - asset: assets/fonts/OpenSans-Regular.ttf
   #       - asset: fonts/Schyler-Italic.ttf
   #         style: italic
   #   - family: Trajan Pro

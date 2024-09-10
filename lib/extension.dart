@@ -1,4 +1,4 @@
-extension Common on String {
+extension StringExt on String {
   String trimStringFromJavascript() {
     var data = replaceFirst("\"", "", 0);
     data = data.replaceFirst("\"", "", data.length - 1);
@@ -27,4 +27,19 @@ extension Common on String {
 
   return uuidWithDashes;
 }
+}
+
+extension IntExt on int {
+  String toTimeDisplay() {
+    String formatTime(int time) => time < 10 ? "0$time" : "$time";
+
+    final seconds = this ~/ 1000;
+    final hoursDisplay = seconds ~/ 3600;
+    final remainSeconds = seconds - hoursDisplay * 3600;
+    final minutesDisplay = remainSeconds ~/ 60;
+    final secondDisplay = remainSeconds % 60;
+
+    return "${formatTime(hoursDisplay)}:${formatTime(minutesDisplay)}:${formatTime(secondDisplay)}";
+
+  }
 }

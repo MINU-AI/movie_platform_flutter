@@ -1,8 +1,13 @@
 package com.minu.player
 
+import android.app.Activity
 import android.content.Context
+import android.content.Context.WINDOW_SERVICE
+import android.content.ContextWrapper
+import android.content.MutableContextWrapper
 import android.net.Uri
 import android.view.View
+import android.view.WindowManager
 import androidx.annotation.OptIn
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
@@ -45,12 +50,31 @@ class NativePlayerView(
     val player: ExoPlayer?
         get() = videoView.player as ExoPlayer?
 
+    var activity: Activity? = null
+
     override fun getView(): View {
         return videoView
     }
 
     override fun dispose() {
         player?.release()
+    }
+
+    override fun onFlutterViewAttached(flutterView: View) {
+        super.onFlutterViewAttached(flutterView)
+        var context = view.context
+        while (context is ContextWrapper) {
+            context = context.baseContext
+            if (context is Activity) {
+                activity = context
+                break
+            }
+        }
+    }
+
+    override fun onFlutterViewDetached() {
+        super.onFlutterViewDetached()
+        activity = null
     }
 
     val TAG = "NativePlayerView"
@@ -115,6 +139,32 @@ val NativePlayerView.handleMethodCall: MethodChannel.MethodCallHandler
                 result.success(player?.currentPosition)
             }
 
+            MethodCalls.getBufferedPosition -> {
+                if(player == null) {
+                    result.error("player_err", "The player is not initialized", null)
+                    return@MethodCallHandler
+                }
+                result.success(player?.bufferedPosition)
+            }
+
+            MethodCalls.getBufferedPercentage -> {
+                if(player == null) {
+                    result.error("player_err", "The player is not initialized", null)
+                    return@MethodCallHandler
+                }
+                result.success(player?.bufferedPercentage)
+            }
+
+            MethodCalls.setBrightness -> {
+                val params = call.arguments as Map<*, *>
+                val brightness = params["value"] as Double
+                activity?.let {
+                    val layoutParams = it.window.attributes
+                    layoutParams.screenBrightness = brightness.toFloat()
+                    it.window.attributes = layoutParams
+                }
+            }
+
             else -> {
                 result.notImplemented()
             }
@@ -128,7 +178,7 @@ fun NativePlayerView.createPlayer(creationParams: Map<*, *>): Player {
     val defaultLoadControl = DefaultLoadControl.Builder()
         .setAllocator(DefaultAllocator(true, C.DEFAULT_BUFFER_SEGMENT_SIZE))
         .setTargetBufferBytes(C.LENGTH_UNSET)
-        .setBufferDurationsMs(1000, 2000, 500, 500)
+        .setBufferDurationsMs(60000, 60 * 60 * 1000, 1500, 3000)
         .setPrioritizeTimeOverSizeThresholds(true)
         .build()
 

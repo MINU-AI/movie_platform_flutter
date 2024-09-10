@@ -1,11 +1,12 @@
 import 'dart:async';
+import 'dart:ffi';
 import 'dart:io';
 
 import 'package:flutter/services.dart';
 
 import 'logger.dart';
 import 'movie_platform_api.dart';
-import 'platform_constant.dart';
+import 'native_constant.dart';
 
 abstract class DrmPlayer {
   MoviePayload payload;
@@ -53,6 +54,14 @@ abstract class DrmPlayer {
   Future<int?> get duration => channel.invokeMethod(MethodCalls.getDuration.name);
 
   Future<int?> get currentPosition => channel.invokeMethod(MethodCalls.getCurrentPosition.name);
+
+  Future<int?> get bufferedPosition => channel.invokeMethod(MethodCalls.getBufferedPosition.name);
+
+  Future<int?> get bufferedPercentage => channel.invokeMethod(MethodCalls.getBufferedPercentage.name);
+
+   void setBrightness(double brightness) {
+    channel.invokeMethod(MethodCalls.setBrightness.name, {"value" : brightness });
+  }
 
   void addListener(PlayerListener listener) {
     if(!_listeners.contains(listener)) {
@@ -104,6 +113,8 @@ class _WideVinePlayer extends DrmPlayer {
   void showControl(bool show) {
     channel.invokeMethod(MethodCalls.controlPlayer.name, { "action" : PlayerControlAction.showControl.name, "value" : show });
   }
+
+ 
   
   Future<dynamic> _handleMethodCall(MethodCall call) async {
     final nativeCall = MethodCalls.fromString(call.method);

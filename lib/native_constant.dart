@@ -18,6 +18,9 @@ enum MethodCalls {
   onPlayingChange,
   getDuration,
   getCurrentPosition,
+  getBufferedPosition,
+  getBufferedPercentage,
+  setBrightness,
   controlPlayer;
 
   static MethodCalls fromString(String methodName) {
@@ -34,6 +37,12 @@ enum MethodCalls {
         return getDuration;
       case "getCurrentPosition":
         return getCurrentPosition;
+      case "getBufferedPercentage":
+        return getBufferedPercentage;
+      case "getBufferedPosition":
+        return getBufferedPosition;
+      case "setBrightness":
+        return setBrightness;
       default:
         throw "Unsupported method call :$methodName";
     }

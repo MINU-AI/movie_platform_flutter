@@ -1,6 +1,7 @@
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:player/logger.dart';
 import 'package:player/player.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -20,10 +21,13 @@ class _HomeState extends State<HomeScreen> {
   ];
 
   final platform = MoviePlatform.youtube;
+  var _isLandscape = false;
 
   @override
   Widget build(BuildContext context) {
     final screenWidth =  MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
+    logger.i("Got screen width: $screenWidth, $screenHeight, ${9 / 16 * screenWidth}");
 
     return Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -32,79 +36,36 @@ class _HomeState extends State<HomeScreen> {
 
           SizedBox(
             width: screenWidth,
-            height: 9 / 16 * screenWidth,
-            child: _player != null ? PlayerView.creatPlater(player: _player!) : null,
+            height: _isLandscape ? screenHeight : 9 / 16 * screenWidth,
+            child: _player != null ? PlayerView.create(player: _player!, title: _player!.payload.info?.title, onFullscreen: (isLandscape) {
+              setState(() {
+                _isLandscape = isLandscape;
+              });
+            },) : null,
           ),
 
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              TextButton(
-                onPressed: () {
-                  _player?.play();
-                },
-                child: const Text("Play"),
-              ),
+          _isLandscape ? const SizedBox() : GestureDetector(
+                      onTap: () {
+                        final pickerView = MoviePickerView.createView(platform);
 
-              const SizedBox(width: 8,),
-
-              TextButton(
-                onPressed: () {
-                  _player?.pause();
-                },
-                child: const Text("Pause"),
-              ),
-
-              const SizedBox(width: 8,),
-
-              TextButton(
-                onPressed: () {
-                  _player?.stop();
-                },
-                child: const Text("Stop"),
-              ),
-
-            ],
-          ),
-
-          GestureDetector(
-          onTap: () {
-            final pickerView = MoviePickerView.createView(platform);
-
-            Navigator.of(context).push(CupertinoPageRoute(builder: (_) => pickerView)).then(
-              (value) async {           
-                  final moviePayload = value as MoviePayload?;                  
-                  if(moviePayload != null) {
-                    if(_player == null) {              
-                      setState(() {
-                        _player = DrmPlayer.creatPlayer(payload: moviePayload, platform: platform);
-                      });                                                    
-                    } else {             
-                      _player!.updatePlayer(payload: moviePayload, platform: platform);
-                    }
-                  }                       
-              }
-            );
-          },
-          child: const Text("Pick video"),          
-        ),
-
-        // GestureDetector(
-        //   onTap: () async {
-        //     final moviePlayback = movieList[(_currentMovieIndex++) % 2];
-        //     final accessToken = await dataCacheManager.get(CacheDataKey.disney_video_access_token);
-
-        //     if(_player == null) {              
-        //       setState(() {
-        //         _player = DrmPlayer.creatPlayer(moviePlayback: moviePlayback, platform: MoviePlatformType.disney, authorizeToken: accessToken);
-        //       });                                                    
-        //     } else {              
-        //       final player = DrmPlayer.creatPlayer(moviePlayback: moviePlayback, platform: MoviePlatformType.disney, authorizeToken: accessToken);  
-        //       const MethodChannel(platformChannel).invokeMethod(NativeMethodCall.controlPlayer.name, {"action" : PlayerControlAction.changePlayback.name, "value" : player.paramsForPlayerView});
-        //     }
-        //   },
-        //   child: Text("Change video"),
-        // )
+                        Navigator.of(context).push(CupertinoPageRoute(builder: (_) => pickerView)).then(
+                          (value) async {           
+                              final moviePayload = value as MoviePayload?;                  
+                              if(moviePayload != null) {
+                                if(_player == null) {              
+                                  setState(() {
+                                    _player = DrmPlayer.creatPlayer(payload: moviePayload, platform: platform);
+                                  });                                                    
+                                } else {             
+                                  _player!.updatePlayer(payload: moviePayload, platform: platform);
+                                }
+                              }                       
+                          }
+                        );
+                      },
+                      child: const Text("Pick video"),          
+                    )
+       
         ],
       );
     }
