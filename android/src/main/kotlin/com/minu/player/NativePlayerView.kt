@@ -43,7 +43,7 @@ class NativePlayerView(
     }
 
     val videoView: PlayerView = PlayerView(context).apply {
-//        useController = false
+        useController = false
         player = createPlayer(creationParams)
     }
 

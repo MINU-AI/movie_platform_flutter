@@ -1,0 +1,11 @@
+framework module player {
+  umbrella header "player-umbrella.h"
+
+  export *
+  module * { export * }
+}
+
+module player.Swift {
+  header "player-Swift.h"
+  requires objc
+}

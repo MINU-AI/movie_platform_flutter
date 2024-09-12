@@ -24,6 +24,7 @@ enum CacheDataKey {
   hulu_access_token,
   hulu_device_token,
   hulu_expire_time,
+  prime_logged_in,
 }
 
 class _DataCacheManagerImpl extends DataCacheManager {

@@ -6,13 +6,11 @@ import 'package:player/logger.dart';
 import 'package:player/movie_web_view.dart';
 import 'package:player/player.dart';
 import 'package:webview_cookie_manager/webview_cookie_manager.dart';
-import 'package:webview_flutter/webview_flutter.dart';
 import 'package:collection/collection.dart';
 import '../extension.dart';
 
 class PrimeWebView extends MovieWebView {
-  final bool isLoggedIn;
-  const PrimeWebView({super.key, required this.isLoggedIn, required super.platform });
+  const PrimeWebView({super.key, required super.platform });
 
   @override
   PlatformState<MovieWebView> get state => _PrimeState();
@@ -20,10 +18,14 @@ class PrimeWebView extends MovieWebView {
 }
 
 class _PrimeState extends PlatformState<PrimeWebView> {
+  
   String? _videoId;
 
+  @override  
+  bool get loadUrlAtStartUp => false;
+
   @override
-  String get url => widget.isLoggedIn ? "https://www.amazon.com/Amazon-Video/b?ie=UTF8&node=2858778011&ref_=nav_signin" : "https://www.amazon.com/ap/signin?openid.pape.max_auth_age=0&openid.return_to=https%3A%2F%2Fwww.amazon.com%2FAmazon-Video%2Fb%3Fie%3DUTF8%26node%3D2858778011%26ref_%3Dnav_signin&openid.identity=http%3A%2F%2Fspecs.openid.net%2Fauth%2F2.0%2Fidentifier_select&openid.assoc_handle=usflex&openid.mode=checkid_setup&openid.claimed_id=http%3A%2F%2Fspecs.openid.net%2Fauth%2F2.0%2Fidentifier_select&openid.ns=http%3A%2F%2Fspecs.openid.net%2Fauth%2F2.0";
+  String get url =>  "https://www.amazon.com/Amazon-Video/b?ie=UTF8&node=2858778011&ref_=nav_signin";
 
   @override
   String? get userAgent => "Mozilla/5.0 (iPhone; CPU iPhone OS 16_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Mobile/15E148 Safari/604.1";
@@ -39,7 +41,13 @@ class _PrimeState extends PlatformState<PrimeWebView> {
 
     """;
 
-    @override
+  @override
+  void initState() {
+    super.initState();
+    initLoadUrl();
+  }
+
+  @override
   void onUrlChange(String url) {    
     final uri = Uri.parse(url);
     final pathSegments = uri.pathSegments;
@@ -49,13 +57,17 @@ class _PrimeState extends PlatformState<PrimeWebView> {
         logger.i("Got video id: $_videoId");
       }
     }
+
+    if(url.startsWith("https://www.amazon.com/Amazon-Video")) {
+      dataCacheManager.cache(CacheDataKey.prime_logged_in, true);
+    }
   }
 
   @override
   void onJavascriptReceived(String message) {
     final data = jsonDecode(message);
     logger.i("onJavascriptReceived: $data");
-    final clickButton = (data["click"] as String).toLowerCase();    
+    final clickButton = (data["click"] as String).toLowerCase().trim();    
     if(clickButton.contains("watch now") || clickButton.contains("continue watching")) {
       int? episode;
       if(clickButton.contains("episode")) {
@@ -65,7 +77,9 @@ class _PrimeState extends PlatformState<PrimeWebView> {
         logger.i("Got episode: $episode");        
       } 
       _extractMoviePlayback(episode: episode);
-    } 
+    } else if(clickButton == "sign out") {
+      dataCacheManager.cache(CacheDataKey.prime_logged_in, false);
+    }
   }
 
 }
@@ -152,5 +166,12 @@ extension on _PrimeState {
     return cookies;
   }
 
+}
 
+extension on _PrimeState {
+  void initLoadUrl() async {
+    final isLoggedIn = await dataCacheManager.get(CacheDataKey.prime_logged_in) ?? false;
+    final url = isLoggedIn ? "https://www.amazon.com/Amazon-Video/b?ie=UTF8&node=2858778011&ref_=nav_signin" : "https://www.amazon.com/ap/signin?openid.pape.max_auth_age=0&openid.return_to=https%3A%2F%2Fwww.amazon.com%2FAmazon-Video%2Fb%3Fie%3DUTF8%26node%3D2858778011%26ref_%3Dnav_signin&openid.identity=http%3A%2F%2Fspecs.openid.net%2Fauth%2F2.0%2Fidentifier_select&openid.assoc_handle=usflex&openid.mode=checkid_setup&openid.claimed_id=http%3A%2F%2Fspecs.openid.net%2Fauth%2F2.0%2Fidentifier_select&openid.ns=http%3A%2F%2Fspecs.openid.net%2Fauth%2F2.0";
+    loadUrl(url);
+  }
 }

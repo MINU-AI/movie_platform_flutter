@@ -11,7 +11,7 @@ class TextView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Text(text, style: TextStyle(fontFamily: "OpenSans", color: color, fontSize: fontSize, fontWeight: fontWeight, decoration: TextDecoration.none), maxLines: maxLines, overflow: maxLines != null ? TextOverflow.ellipsis : null,);
+    return Text(text, style: TextStyle(fontFamily: "OpenSans", color: color, fontSize: fontSize, fontWeight: fontWeight ?? FontWeight.normal, decoration: TextDecoration.none), maxLines: maxLines, overflow: maxLines != null ? TextOverflow.ellipsis : null,);
   }
   
 }

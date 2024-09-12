@@ -1,0 +1,11 @@
+framework module volume_controller {
+  umbrella header "volume_controller-umbrella.h"
+
+  export *
+  module * { export * }
+}
+
+module volume_controller.Swift {
+  header "volume_controller-Swift.h"
+  requires objc
+}

@@ -6,6 +6,7 @@ enum PlatformViewParams {
   playbackUrl,
   licenseUrl,
   platformId,
+  certificateUrl,
   metadata,
 }
 

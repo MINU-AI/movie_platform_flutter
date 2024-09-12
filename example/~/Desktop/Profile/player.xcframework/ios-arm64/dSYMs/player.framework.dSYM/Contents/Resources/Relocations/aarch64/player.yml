@@ -1,0 +1,23 @@
+---
+triple:          'arm64-apple-darwin'
+binary-path:     '/Users/lannn/Desktop/Apps/player/example/~/Desktop/Profile/iphoneos/Profile-iphoneos/player/player.framework/player'
+relocations:
+  - { offsetInCU: 0x34, offset: 0x57DB7, size: 0x8, addend: 0x0, symName: _playerVersionString, symObjAddr: 0x0, symBinAddr: 0xAC90, symSize: 0x0 }
+  - { offsetInCU: 0x69, offset: 0x57DEC, size: 0x8, addend: 0x0, symName: _playerVersionNumber, symObjAddr: 0x28, symBinAddr: 0xACB8, symSize: 0x0 }
+  - { offsetInCU: 0xD4, offset: 0x57ED6, size: 0x8, addend: 0x0, symName: '_$s6player12PlayerPluginC8register4withySo07FlutterC9Registrar_p_tFZTo', symObjAddr: 0x10C, symBinAddr: 0x810C, symSize: 0xE0 }
+  - { offsetInCU: 0x19B, offset: 0x57F9D, size: 0x8, addend: 0x0, symName: '_$s6player12PlayerPluginC6handle_6resultySo17FlutterMethodCallC_yypSgctFTo', symObjAddr: 0x440, symBinAddr: 0x8440, symSize: 0x78 }
+  - { offsetInCU: 0x1E3, offset: 0x57FE5, size: 0x8, addend: 0x0, symName: '_$s6player12PlayerPluginCACycfcTo', symObjAddr: 0x4E8, symBinAddr: 0x84E8, symSize: 0x3C }
+  - { offsetInCU: 0x234, offset: 0x58036, size: 0x8, addend: 0x0, symName: '_$s6player12PlayerPluginC6handle_6resultySo17FlutterMethodCallC_yypSgctF015$syXlSgIeyBy_ypK7Iegn_TRyXlSgIeyBy_Tf1ncn_nTf4ndg_n', symObjAddr: 0x57C, symBinAddr: 0x857C, symSize: 0x2CC }
+  - { offsetInCU: 0x2AB, offset: 0x580AD, size: 0x8, addend: 0x0, symName: '_$s6player12PlayerPluginCMa', symObjAddr: 0xEC, symBinAddr: 0x80EC, symSize: 0x20 }
+  - { offsetInCU: 0x2E4, offset: 0x580E6, size: 0x8, addend: 0x0, symName: '_$sSo8NSObjectCMa', symObjAddr: 0x384, symBinAddr: 0x8384, symSize: 0x3C }
+  - { offsetInCU: 0x2F8, offset: 0x580FA, size: 0x8, addend: 0x0, symName: '_$sypSgWOh', symObjAddr: 0x3C0, symBinAddr: 0x83C0, symSize: 0x40 }
+  - { offsetInCU: 0x30C, offset: 0x5810E, size: 0x8, addend: 0x0, symName: ___swift_instantiateConcreteTypeFromMangledName, symObjAddr: 0x400, symBinAddr: 0x8400, symSize: 0x40 }
+  - { offsetInCU: 0x32B, offset: 0x5812D, size: 0x8, addend: 0x0, symName: '_$sypSgWOc', symObjAddr: 0x848, symBinAddr: 0x8848, symSize: 0x48 }
+  - { offsetInCU: 0x33F, offset: 0x58141, size: 0x8, addend: 0x0, symName: ___swift_project_boxed_opaque_existential_0, symObjAddr: 0x890, symBinAddr: 0x8890, symSize: 0x24 }
+  - { offsetInCU: 0x353, offset: 0x58155, size: 0x8, addend: 0x0, symName: ___swift_destroy_boxed_opaque_existential_0, symObjAddr: 0x8B4, symBinAddr: 0x88B4, symSize: 0x20 }
+  - { offsetInCU: 0x4D4, offset: 0x582D6, size: 0x8, addend: 0x0, symName: '_$s6player12PlayerPluginC8register4withySo07FlutterC9Registrar_p_tFZ', symObjAddr: 0x0, symBinAddr: 0x8000, symSize: 0xCC }
+  - { offsetInCU: 0x556, offset: 0x58358, size: 0x8, addend: 0x0, symName: '_$s6player12PlayerPluginCACycfC', symObjAddr: 0xCC, symBinAddr: 0x80CC, symSize: 0x20 }
+  - { offsetInCU: 0x591, offset: 0x58393, size: 0x8, addend: 0x0, symName: '_$s6player12PlayerPluginC6handle_6resultySo17FlutterMethodCallC_yypSgctF', symObjAddr: 0x1EC, symBinAddr: 0x81EC, symSize: 0x198 }
+  - { offsetInCU: 0x5F9, offset: 0x583FB, size: 0x8, addend: 0x0, symName: '_$s6player12PlayerPluginCACycfc', symObjAddr: 0x4B8, symBinAddr: 0x84B8, symSize: 0x30 }
+  - { offsetInCU: 0x62A, offset: 0x5842C, size: 0x8, addend: 0x0, symName: '_$s6player12PlayerPluginCfD', symObjAddr: 0x524, symBinAddr: 0x8524, symSize: 0x30 }
+...

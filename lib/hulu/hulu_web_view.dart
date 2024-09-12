@@ -49,8 +49,9 @@ class _HuluState extends PlatformState<HuluWebView> {
           final payload = MoviePayload(playback: moviePlayback, info: movieInfo, metadata: metadata);
           popScreen(payload);          
         } catch(e) {
-          logger.e(e);          
+          logger.e("onUrlChange: $e");          
           toggleLoading(false);
+          popScreen();
         }
       }
     }

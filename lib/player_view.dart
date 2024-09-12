@@ -41,7 +41,7 @@ abstract class PlayerView extends StatefulWidget {
 }
 
 class _PlayerViewState extends State<PlayerView> with PlayerListener, TickerProviderStateMixin {
-  var _showPlayerLoading = false;
+  var _showPlayerLoading = true;
   var _progressWidth = 0.0;
   var _progressBufferWidth = 0.0;
   bool? _isPlaying;
@@ -139,8 +139,8 @@ class _PlayerViewState extends State<PlayerView> with PlayerListener, TickerProv
     if(state == PlayerState.end) {
       releaseUpdatePlayerTimer();
     }
-    setState(() {
-        _showPlayerLoading = state == PlayerState.bufferring;  
+    setState(() {      
+      _showPlayerLoading = state == PlayerState.bufferring;        
     });    
   }
   
@@ -172,7 +172,7 @@ extension on _PlayerViewState {
       if(currentPosition == null || duration == null || bufferedPercentage == null) {
         return;
       }
-      // logger.i("Got currentPosition: $currentPosition, $bufferedPercentage");
+      logger.i("Got currentPosition: $currentPosition, $bufferedPercentage");
       final newBufferWidth = (bufferedPercentage / 100.0) * seekBarWidth;
       if(newBufferWidth != _progressBufferWidth) {
           final animationDuration = ((_progressBufferWidth - newBufferWidth).abs() / seekBarWidth) * _animationDuration;
@@ -251,11 +251,11 @@ extension on _PlayerViewState {
 
   void initVolumeController() {
     final volumeController =  VolumeController();
-    volumeController.listener((volume) {
-      setState(() {
-        _currentVolume = volume;
-      });
-    });
+    // volumeController.listener((volume) {      
+    //   setState(() {
+    //     _currentVolume = volume;
+    //   });
+    // });
     volumeController.showSystemUI = true;
     volumeController.getVolume().then((volume) {
       logger.i("Got current volume: $volume");
@@ -318,7 +318,7 @@ extension on _PlayerViewState {
                     top: 12,
                     left: 12,
                     right: 12,
-                    child: ConstrainedBox(constraints: BoxConstraints(maxHeight: seekBarWidth - 32), child: TextView(text: widget.title!, maxLines: 1,)),
+                    child: ConstrainedBox(constraints: BoxConstraints(maxHeight: seekBarWidth - 32), child: TextView(text: widget.title!, maxLines: 1, fontSize: 12,)),
                   ) : const SizedBox(),
 
                 Column(
@@ -436,7 +436,7 @@ extension on _PlayerViewState {
                         child: SizedBox(
                           width: 48,
                           height: 48,
-                          child: _isPlaying != null ? Image(image: AssetImage(_isPlaying! ?  Assets.icPlayerPlay : Assets.icPause), width: 48, height: 48,) : null,
+                          child: _isPlaying != null ? Image(image: AssetImage(_isPlaying! ?  Assets.icPause : Assets.icPlayerPlay), width: 48, height: 48,) : null,
                         )                        
                       ),
 
@@ -458,7 +458,7 @@ extension on _PlayerViewState {
 
                       _VerticalSeekBar(topIcon: Assets.icPlayerVolume, initialValue: _currentVolume, onStart: releaseControlTimer, onEnd: createControlTimer,  onUpdate: (volume) {
                         setState(() {
-                          _currentVolume = volume;
+                          // _currentVolume = volume;
                           VolumeController().setVolume(_currentVolume);                          
                         },);
                       },),
@@ -470,14 +470,6 @@ extension on _PlayerViewState {
               ],
             );
   }
-}
-
-class _IOSPlayerView extends PlayerView {
-  const _IOSPlayerView({ required super.player, super.title, super.onFullscreen, });
-  
-  @override
-  Widget get nativePlayerView => throw UnimplementedError();
-  
 }
 
 class _VerticalSeekBar extends StatefulWidget {
@@ -598,5 +590,19 @@ class _AndroidPlayerView extends PlayerView {
       creationParamsCodec: const StandardMessageCodec(),
     );
   }
+  
+}
+
+class _IOSPlayerView extends PlayerView {
+  const _IOSPlayerView({ required super.player, super.title, super.onFullscreen, });
+  
+  @override
+  Widget get nativePlayerView =>
+    UiKitView(
+      viewType: viewType.name,
+      layoutDirection: TextDirection.ltr,
+      creationParams: player.paramsForPlayerView,
+      creationParamsCodec: const StandardMessageCodec(),
+    );
   
 }

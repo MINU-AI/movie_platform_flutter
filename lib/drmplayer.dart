@@ -1,6 +1,4 @@
 import 'dart:async';
-import 'dart:ffi';
-import 'dart:io';
 
 import 'package:flutter/services.dart';
 
@@ -8,7 +6,7 @@ import 'logger.dart';
 import 'movie_platform_api.dart';
 import 'native_constant.dart';
 
-abstract class DrmPlayer {
+class DrmPlayer {
   MoviePayload payload;
   MoviePlatform platform;
  
@@ -16,19 +14,15 @@ abstract class DrmPlayer {
   
   final List<PlayerListener> _listeners = [];
 
-  DrmPlayer({ required this.payload, required this.platform, });
-
-  factory DrmPlayer.creatPlayer({ required MoviePayload payload, required MoviePlatform platform}) {
-    if(Platform.isAndroid) {
-      return _WideVinePlayer(payload: payload, platform: platform);
-    }
-    throw "Unimplemented for this platform";
+  DrmPlayer({ required this.payload, required this.platform, }) {
+     channel.setMethodCallHandler(_handleMethodCall);
   }
 
   Map<String, dynamic> get paramsForPlayerView {
     return {
       PlatformViewParams.playbackUrl.name : payload.playback.playbackUrl,
       PlatformViewParams.licenseUrl.name : payload.playback.licenseKeyUrl,
+      PlatformViewParams.certificateUrl.name : payload.playback.licenseCertificateUrl,
       PlatformViewParams.platformId.name: platform.name,
       PlatformViewParams.metadata.name: payload.metadata,
     };
@@ -41,15 +35,25 @@ abstract class DrmPlayer {
     const MethodChannel(platformChannel).invokeMethod(MethodCalls.controlPlayer.name, {"action" : PlayerControlAction.changePlayback.name, "value" : paramsForPlayerView});
   }
 
-  void pause();
+  void play() {
+    channel.invokeMethod(MethodCalls.controlPlayer.name, { "action" : PlayerControlAction.play.name });
+  }
 
-  void stop();
+  void pause() {
+    channel.invokeMethod(MethodCalls.controlPlayer.name, { "action" : PlayerControlAction.pause.name });    
+  }
 
-  void seek(Duration duration);
+  void seek(Duration duration) {
+    channel.invokeMethod(MethodCalls.controlPlayer.name, { "action" : PlayerControlAction.seek.name, "value" : duration.inMilliseconds });
+  }
 
-  void play();
+  void stop() {
+    channel.invokeMethod(MethodCalls.controlPlayer.name, { "action" : PlayerControlAction.stop.name });
+  }
 
-  void showControl(bool show);
+  void showControl(bool show) {
+    channel.invokeMethod(MethodCalls.controlPlayer.name, { "action" : PlayerControlAction.showControl.name, "value" : show });
+  }
 
   Future<int?> get duration => channel.invokeMethod(MethodCalls.getDuration.name);
 
@@ -72,50 +76,7 @@ abstract class DrmPlayer {
   void removeListener(PlayerListener listener) {
     _listeners.remove(listener);
   }
-  
-}
 
-mixin PlayerListener {
-  void onPlaybackStateChanged(PlayerState state);
-
-  void onPlayerError(PlayerError error);
-
-  void onPlayingChange(bool isPlaying);
-}
-
-class _WideVinePlayer extends DrmPlayer {
- 
-  _WideVinePlayer({ required super.payload, required super.platform }) {
-    channel.setMethodCallHandler(_handleMethodCall);
-  }
-
-  @override
-  void play() {
-    channel.invokeMethod(MethodCalls.controlPlayer.name, { "action" : PlayerControlAction.play.name });
-  }
-
-  @override
-  void pause() {
-    channel.invokeMethod(MethodCalls.controlPlayer.name, { "action" : PlayerControlAction.pause.name });    
-  }
-
-  @override
-  void seek(Duration duration) {
-    channel.invokeMethod(MethodCalls.controlPlayer.name, { "action" : PlayerControlAction.seek.name, "value" : duration.inMilliseconds });
-  }
-
-  @override
-  void stop() {
-    channel.invokeMethod(MethodCalls.controlPlayer.name, { "action" : PlayerControlAction.stop.name });
-  }
-
-  @override
-  void showControl(bool show) {
-    channel.invokeMethod(MethodCalls.controlPlayer.name, { "action" : PlayerControlAction.showControl.name, "value" : show });
-  }
-
- 
-  
   Future<dynamic> _handleMethodCall(MethodCall call) async {
     final nativeCall = MethodCalls.fromString(call.method);
     
@@ -142,7 +103,7 @@ class _WideVinePlayer extends DrmPlayer {
       case MethodCalls.onPlayingChange:
         final data = call.arguments;
         final isPlaying = data["isPlaying"] as bool;
-        logger.i("onPlayingChange: $isPlaying");
+        logger.i("Got onPlayingChange: $isPlaying");
         for(final listener in _listeners) {
           listener.onPlayingChange(isPlaying);
         }
@@ -152,6 +113,14 @@ class _WideVinePlayer extends DrmPlayer {
     }
   }
   
+}
+
+mixin PlayerListener {
+  void onPlaybackStateChanged(PlayerState state);
+
+  void onPlayerError(PlayerError error);
+
+  void onPlayingChange(bool isPlaying);
 }
 
 enum PlayerState {

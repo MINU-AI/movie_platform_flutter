@@ -48,7 +48,7 @@ class HuluApi extends MoviePlatformApi {
     } catch (e) {
       logger.e(e);
       await refreshToken();
-      getMovieInfo(movieId, 2);
+      getMovieInfo(movieId, retry+1);
     }
 
     throw "Cannot get movie info";
@@ -63,15 +63,15 @@ class HuluApi extends MoviePlatformApi {
       "content_eab_id" : eabId,
        "play_intent" : "resume",
        "unencrypted" : true,
-      //  "device_id" : "E2B11E95-FA2B-488D-90DA-776E0B7DE54A",
-       "version" : 17,
+       "device_id" : Platform.isAndroid ? null : "E2B11E95-FA2B-488D-90DA-776E0B7DE54A",
+       "version" : Platform.isAndroid ? 17 : 3,
 //                    var version = 1
-       "deejay_device_id" : 188,
+       "deejay_device_id" :Platform.isAndroid ? 188 : 176,
 //                    var deejay_device_id = 191
        "skip_ad_support" : true,
        "all_cdn" : false,
        "ignore_kids_block" : false,
-       "device_identifier" : "0000b872ee876f0cb26a20d57d8396a382fe",
+       "device_identifier" : Platform.isAndroid ?  "0000b872ee876f0cb26a20d57d8396a382fe" : "E2B11E95-FA2B-488D-90DA-776E0B7DE54A",
 //                    var device_identifier = "302DFAC6BC84A5E8697ADAB4240499B8:b216"
        "include_t2_rev_beacon" : false,
        "include_t2_adinteraction_beacon" : false,
@@ -85,19 +85,35 @@ class HuluApi extends MoviePlatformApi {
        "format" : "json",
        "is_tablet" : false,
 //                    var all_cdn = true
-      //  "region" : "US",
-      //  "language" : "en",
+       "region" : "US",
+       "language" : "en",
        "playback" : {
           "version" : 2,
           "video" : {
             "codecs" : {
-              "selection_mode" : "ALL",
-              "values" : [
+              "selection_mode" : Platform.isAndroid ? "ALL" : "ONE",
+              "values" : Platform.isAndroid ? [
                 {
                   "type" : "H264",
                   "width" : 1920,
                   "height" : 1080,
                   "framerate" : 60,
+                  "level" : "4.1",
+                  "profile" : "HIGH"
+                }
+              ] : [
+                {
+                  "tier" : "MAIN",
+                  "type" : "H265",
+                  "width" : 1920,
+                  "height" : 1080,
+                  "level" : "4.1",
+                  "profile" : "MAIN_10"
+                }, 
+                {                  
+                  "type" : "H264",
+                  "width" : 1920,
+                  "height" : 1080,
                   "level" : "4.1",
                   "profile" : "HIGH"
                 }
@@ -108,27 +124,38 @@ class HuluApi extends MoviePlatformApi {
         "audio" : {
           "codecs" : {
               "selection_mode" : "ALL",
-              "values" : [
+              "values" : Platform.isAndroid ? [
                 {
                   "type" : "AAC"
                 }
+              ] : [
+                 {
+                  "type" : "AAC"
+                 },
+                 {
+                  "type" : "EC3"
+                 }
               ]
             }
         },
 
         "drm" : {
           "selection_mode" : "ONE",
-          "values" : [
+          "values" : Platform.isAndroid ? [
             {
               "type" : "WIDEVINE",
               "version" : "MODULAR",
-              "security_level" : "L1"
+              "security_level" : "L1",
+            }
+          ] : [
+            {
+              "type" : "FAIRPLAY",
             }
           ]
         },
 
         "manifest" : {
-          "type" : "DASH",
+          "type" : Platform.isAndroid ? "DASH" : "HLS",
           "https" : true,
           "multiple_cdns" : false,
           "patch_updates" : true,
@@ -137,18 +164,40 @@ class HuluApi extends MoviePlatformApi {
           "multiple_periods" : false,
           "xlink" : false,
           "secondary_audio" : true,
-          "live_fragment_delay" : 3
+          "live_fragment_delay" : 3,
         },
 
         "segments" : {
-          "values" : [{
+          "values" : Platform.isAndroid ? [
+            {
             "type" : "FMP4",
             "encryption" :  {
                 "mode" : "CENC",
                 "type" : "CENC"
             },
             "https" : true
-          }],
+            }
+          ] : [
+            {
+              "muxed": false, 
+              "https": true, 
+              "type": "FMP4",
+              "encryption": {
+                "mode": "CBCS", 
+                "type": "CENC"
+              }
+            },
+
+            {
+              "muxed": true, 
+              "https": true, 
+              "type": "MPEGTS",
+              "encryption": {
+                "mode": "CBCS", 
+                "type": "SAMPLE_AES"
+              }
+            },
+          ],
           "selection_mode" : "ONE"
         }
       }
@@ -161,26 +210,29 @@ class HuluApi extends MoviePlatformApi {
 
     var response = await post(endpoint, headers: headers, body: payload);
     var playbackUrl = response["stream_url"];
-    final licenseKeyUrl = response["wv_server"];
+    final licenseKeyUrl = Platform.isAndroid ? response["wv_server"] : response["fp_server"];
+    final certificateUrl = Platform.isAndroid ? null : response["fp_cert"];
 
-    response = await get(playbackUrl, parseResponseBody: false);
-    final xmlDocument = XmlDocument.parse(response);
-    final contentProtectionElements = xmlDocument.findAllElements("ContentProtection").where( (element) => element.getAttribute("cenc:default_KID") != null);
-    for(final element in contentProtectionElements) {
-      final defaultKID = element.getAttribute("cenc:default_KID");
-      final defaultKIDWithDash = defaultKID?.parseUuidWithoutDashes();
-      element.setAttribute("cenc:default_KID", defaultKIDWithDash);
-      logger.i("Got cenc:default_KID: $defaultKID, $defaultKIDWithDash");
+    if(Platform.isAndroid) {
+      response = await get(playbackUrl, parseResponseBody: false);
+      final xmlDocument = XmlDocument.parse(response);
+      final contentProtectionElements = xmlDocument.findAllElements("ContentProtection").where( (element) => element.getAttribute("cenc:default_KID") != null);
+      for(final element in contentProtectionElements) {
+        final defaultKID = element.getAttribute("cenc:default_KID");
+        final defaultKIDWithDash = defaultKID?.parseUuidWithoutDashes();
+        element.setAttribute("cenc:default_KID", defaultKIDWithDash);
+        logger.i("Got cenc:default_KID: $defaultKID, $defaultKIDWithDash");
+      }
+
+      final directory = await getApplicationCacheDirectory();
+      final mpdFile = File("${directory.path}/playback_${DateTime.now().millisecondsSinceEpoch}.mpd");
+      await mpdFile.create();
+      await mpdFile.writeAsString(xmlDocument.toXmlString());
+      logger.i("Got mpd file path: ${mpdFile.path}");   
+      playbackUrl = "file://${mpdFile.path}";
     }
 
-    final directory = await getApplicationCacheDirectory();
-    final mpdFile = File("${directory.path}/playback_${DateTime.now().millisecondsSinceEpoch}.mpd");
-    await mpdFile.create();
-    await mpdFile.writeAsString(xmlDocument.toXmlString());
-    logger.i("Got mpd file path: ${mpdFile.path}");   
-    playbackUrl = "file://${mpdFile.path}";
-
-    return MoviePlayback(playbackUrl: playbackUrl, licenseKeyUrl: licenseKeyUrl);
+    return MoviePlayback(playbackUrl: playbackUrl, licenseKeyUrl: licenseKeyUrl, licenseCertificateUrl: certificateUrl);
   }
 
   @override
