@@ -125,7 +125,7 @@ extension on _PrimeState {
     }
 
     if(movieId != null) {
-      final movieInfo = _extractMovieInfo(document, episode: episode);
+      final movieInfo = _extractMovieInfo(document, movieId: movieId, episode: episode);
       logger.i("Got movie title: $movieInfo");
       final cookies = await _getCookies();
       final moviePlayback = await platformApi.getPlaybackUrl([movieId, cookies]);
@@ -138,7 +138,7 @@ extension on _PrimeState {
     toggleLoading(false);
   }
 
-  MovieInfo? _extractMovieInfo(Document document, { int? episode }) {
+  MovieInfo? _extractMovieInfo(Document document, { required String movieId, int? episode }) {
     final titleElement = document.querySelector("[data-automation-id='title']");        
     var title = titleElement?.text;
     
@@ -156,7 +156,7 @@ extension on _PrimeState {
       }      
     }
 
-    return MovieInfo(title: title, thumbnail: thumbnail);
+    return MovieInfo(movieId: movieId, title: title, thumbnail: thumbnail);
   }
 
   Future<String> _getCookies() async {

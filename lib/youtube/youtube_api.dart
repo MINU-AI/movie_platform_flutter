@@ -16,7 +16,7 @@ class YoutubeApi extends MoviePlatformApi {
 
     logger.i("Got movie info: $title, $duration, $thumbnail");
 
-    return MovieInfo(title: title, thumbnail: thumbnail, duration: duration);
+    return MovieInfo(movieId: movieId, title: title, thumbnail: thumbnail, duration: duration);
   }
 
   @override

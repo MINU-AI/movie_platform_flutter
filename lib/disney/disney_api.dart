@@ -34,7 +34,7 @@ class DisneyApi extends MoviePlatformApi {
     final thumbnail = "https://disney.images.edge.bamgrid.com/ripcut-delivery/v2/variant/disney/$imageId/compose?format=webp&width=200";
     final durationInMillisec = item["visuals"]["durationMs"] as int?;
 
-    return MovieInfo(title: title, thumbnail: thumbnail, duration: durationInMillisec);
+    return MovieInfo(movieId: movieId, title: title, thumbnail: thumbnail, duration: durationInMillisec);
   }
 
   @override

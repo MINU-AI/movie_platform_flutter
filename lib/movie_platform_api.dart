@@ -63,11 +63,12 @@ enum MoviePlatform {
 }
 
 final class MovieInfo {
+  final String movieId;
   final String title;
   final String? thumbnail;
   final int? duration;
 
-  MovieInfo({required this.title, this.thumbnail, this.duration});
+  MovieInfo({required this.title, required this.movieId, this.thumbnail, this.duration});
 
   dynamic toJson() {
     return {
@@ -112,4 +113,17 @@ class MoviePayload {
   MoviePayload({required this.playback, required this.info, required this.metadata});
 }
 
+Future<bool> get isDiseyLoggedIn async {
+  final token = await dataCacheManager.get(CacheDataKey.disney_video_access_token);
+  return token != null;
+}
 
+Future<bool> get isHuluLoggedIn async {
+  final token = await dataCacheManager.get(CacheDataKey.hulu_access_token);
+  return token != null;
+}
+
+Future<bool> get isPrimeLoggedIn async {
+  final isLoggedIn = await dataCacheManager.get(CacheDataKey.prime_logged_in);
+  return isLoggedIn == true;
+}

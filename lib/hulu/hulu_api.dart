@@ -43,7 +43,7 @@ class HuluApi extends MoviePlatformApi {
         thumbnail = getImageLink(imagePath);
       }
 
-      return MovieInfo(title: title, thumbnail: thumbnail, duration: duration);
+      return MovieInfo(movieId: movieId, title: title, thumbnail: thumbnail, duration: duration);
 
     } catch (e) {
       logger.e(e);
