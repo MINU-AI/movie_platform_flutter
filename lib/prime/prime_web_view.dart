@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:html/dom.dart';
 import 'package:html/parser.dart';
@@ -36,7 +37,7 @@ class _PrimeState extends PlatformState<PrimeWebView> {
             var targetElement = event.target || event.srcElement;
             let textContent = targetElement.textContent;
             let message = JSON.stringify({ "click" : textContent });
-            messageHandler.postMessage(message);
+            $javaScriptChannel.postMessage(message);
         });
 
     """;
@@ -87,7 +88,10 @@ class _PrimeState extends PlatformState<PrimeWebView> {
 extension on _PrimeState {
   Future<void> _extractMoviePlayback({ int? episode }) async {
     toggleLoading(true);
-    var html = (await runJavaScriptReturningResult("document.documentElement.outerHTML") as String).trimStringFromJavascript();
+    var html = (await runJavaScriptReturningResult("document.documentElement.outerHTML") as String);
+    if(Platform.isAndroid) {
+      html = html.trimStringFromJavascript();
+    }
     html = html.decodeUnicode(); 
     final document = parse(html);
     String? movieId;

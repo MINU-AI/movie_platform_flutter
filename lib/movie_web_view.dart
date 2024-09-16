@@ -95,6 +95,8 @@ abstract class PlatformState< V extends MovieWebView> extends State<V> {
 
   var _isDisposed = false;
 
+  String get javaScriptChannel => "messageHandler";
+
   String? get userAgent => "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/101.0.4951.54 Safari/537.36";
 
   late final WeakReference<PlatformState<V>> _weakSelf;
@@ -136,25 +138,25 @@ abstract class PlatformState< V extends MovieWebView> extends State<V> {
             _weakSelf.target?.onUrlChange(urlString);
           },
           onPageStarted: (url) {
-            logger.i("onPageStarted: $url");   
-            if(injectedJavascript != null) {
-              runJavascript(injectedJavascript!);
-            }         
-            _weakSelf.target?.onPageStarted(url);
+            logger.i("onPageStarted: $url");               
+            _weakSelf.target?.onPageStarted(url);            
           },
           onPageFinished: (url) {
             logger.i("onPageFinished: $url");                       
             _weakSelf.target?.onPageFinished(url);
+            if(injectedJavascript != null) {
+              runJavascript(injectedJavascript!);
+            }                     
           },
           onWebResourceError: (WebResourceError error) {
-            logger.e(error);
+            logger.e("onWebResourceError: $error");
           },
           onNavigationRequest: (NavigationRequest request) {
             return NavigationDecision.navigate;
           },
         ),
       )
-      ..addJavaScriptChannel("messageHandler", onMessageReceived: (message) {
+      ..addJavaScriptChannel(javaScriptChannel, onMessageReceived: (message) {
         onJavascriptReceived(message.message);
       })
       ..setUserAgent(userAgent);
@@ -187,8 +189,8 @@ abstract class PlatformState< V extends MovieWebView> extends State<V> {
     return SafeArea(
             child: Stack(
                     alignment: Alignment.bottomLeft,
-                    children: [
-                      WebViewWidget(                        
+                    children: [                      
+                      WebViewWidget(                                                
                         controller: _controller,
                         gestureRecognizers: gestureRecognizers,
                       ),

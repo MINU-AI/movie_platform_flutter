@@ -1,4 +1,6 @@
 
+import 'dart:io';
+
 import '../cache_data_manager.dart';
 import '../logger.dart';
 import '../movie_platform_api.dart';
@@ -65,8 +67,16 @@ class DisneyApi extends MoviePlatformApi {
             }
         };
     final response = await post(url, body: body, headers: headers);
-    final licenseKeyURL = config["services"]["drm"]["client"]["endpoints"]["widevineLicense"]["href"] as String?;
-    final licenseCertificateURL = config["services"]["drm"]["client"]["endpoints"]["widevineCertificate"]["href"] as String?;
+    String? licenseKeyURL;
+    String? licenseCertificateURL;
+    if(Platform.isAndroid) {
+      licenseKeyURL = config["services"]["drm"]["client"]["endpoints"]["widevineLicense"]["href"] as String?;
+      licenseCertificateURL = config["services"]["drm"]["client"]["endpoints"]["widevineCertificate"]["href"] as String?;
+    }
+    
+    licenseKeyURL = config["services"]["drm"]["client"]["endpoints"]["fairPlayLicense"]["href"] as String?;
+    licenseCertificateURL = config["services"]["drm"]["client"]["endpoints"]["fairPlayCertificate"]["href"] as String?;
+      
     final sources = response["stream"]["sources"] as List<dynamic>;
     final playbackUrl = sources.first["complete"]["url"] as String;
     final mediaPlayback = MoviePlayback(playbackUrl: playbackUrl, licenseKeyUrl: licenseKeyURL, licenseCertificateUrl: licenseCertificateURL);
@@ -195,17 +205,17 @@ class DisneyApi extends MoviePlatformApi {
 
 const _clientId = 'disney-svod-3d9324fc';
 const _clientVersion = '9.10.0';
-const _sdkPlatform = "android-tv";
+final _sdkPlatform = Platform.isAndroid ? "android-tv" : "apple/ios/iphone";
 
 const _apiKey = 'ZGlzbmV5JmFuZHJvaWQmMS4wLjA.bkeb0m230uUhv8qrAXuNu39tbE_mD5EEhM_NAcohjyA';
-const _configUrl = 'https://bam-sdk-configs.bamgrid.com/bam-sdk/v5.0/$_clientId/android/v$_clientVersion/google/tv/prod.json';
+final _configUrl = Platform.isAndroid ? 'https://bam-sdk-configs.bamgrid.com/bam-sdk/v5.0/$_clientId/android/v$_clientVersion/google/tv/prod.json' : "https://bam-sdk-configs.bamgrid.com/bam-sdk/v4.0/disney-svod-3d9324fc/apple/v11.1.4/ios/iphone/prod.json";
 const _resourceUrl = "https://disney.api.edge.bamgrid.com/explore/v1.4/upNext";
 const _getPlaybackUrl = "https://disney.playback.edge.bamgrid.com/v7/playback";
 
 final _headers = {
     'User-Agent': 'BAMSDK/v$_clientVersion ($_clientId 2.26.2-rc1.0; v5.0/v$_clientVersion; android; tv)',
     'x-application-version': 'google',
-    'x-bamsdk-platform-id': 'android-tv',
+    'x-bamsdk-platform-id': _sdkPlatform,
     'x-bamsdk-client-id': _clientId,
     'x-bamsdk-platform': _sdkPlatform,
     'x-bamsdk-version': _clientVersion,

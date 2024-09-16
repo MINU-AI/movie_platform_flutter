@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:player/extension.dart';
 
@@ -33,7 +34,10 @@ class _DisneyState extends PlatformState<DisneyWebView> {
                       }
                       profileId;
                     """;
-      final profileId = (await runJavaScriptReturningResult(jsCode) as String).trimStringFromJavascript();
+      var profileId = (await runJavaScriptReturningResult(jsCode) as String);
+      if(Platform.isAndroid) {
+        profileId = profileId.trimStringFromJavascript();
+      }
       logger.i("ProfileId: $profileId");
       if(profileId.isNotEmpty) {
         await getApiToken();
@@ -85,7 +89,11 @@ extension on _DisneyState {
                       }
                       value;
                    """;
-    final data = (await runJavaScriptReturningResult(jsCode) as String).trimStringFromJavascript();
+    var data = (await runJavaScriptReturningResult(jsCode) as String);
+    if(Platform.isAndroid) {
+      data = data.trimStringFromJavascript();
+    }
+
     logger.i("Got token data: $data");
     if (data.isNotEmpty) {
       final jsonData = jsonDecode(data);

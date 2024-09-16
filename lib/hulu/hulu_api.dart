@@ -132,9 +132,9 @@ class HuluApi extends MoviePlatformApi {
                  {
                   "type" : "AAC"
                  },
-                 {
-                  "type" : "EC3"
-                 }
+                //  {
+                //   "type" : "EC3"
+                //  }
               ]
             }
         },

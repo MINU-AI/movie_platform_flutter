@@ -59,6 +59,8 @@ class _PlayerViewState extends State<PlayerView> with PlayerListener, TickerProv
   var _currentVolume = 0.0;
   var _showControl = false;
   var _isLanscape = false;
+  var _isChangingVolume = false;
+  var _currentBrightness = 0.0;
 
   double get seekBarWidth {
     _screenWidth ??=  MediaQuery.of(context).size.width;
@@ -71,6 +73,7 @@ class _PlayerViewState extends State<PlayerView> with PlayerListener, TickerProv
   void initState() {
     widget.player.addListener(this);    
     initVolumeController();
+    initBrightness();
     super.initState();
   }
 
@@ -105,6 +108,7 @@ class _PlayerViewState extends State<PlayerView> with PlayerListener, TickerProv
     releaseControlTimer();
     releaseUpdatePlayerTimer();
     VolumeController().removeListener();
+    
     SystemChrome.setPreferredOrientations([
       DeviceOrientation.landscapeLeft
     ]);
@@ -135,13 +139,15 @@ class _PlayerViewState extends State<PlayerView> with PlayerListener, TickerProv
   
   @override
   void onPlaybackStateChanged(PlayerState state) {
-    widget.player.showControl(false);
+    // logger.i("Got onPlaybackStateChanged: $state");
     if(state == PlayerState.end) {
       releaseUpdatePlayerTimer();
-    }
-    setState(() {      
-      _showPlayerLoading = state == PlayerState.bufferring;        
-    });    
+    }    
+    
+    setState(() {
+      _showPlayerLoading =  state == PlayerState.bufferring;
+    });
+    
   }
   
   @override
@@ -249,22 +255,6 @@ extension on _PlayerViewState {
     widget.player.seek(Duration(microseconds: (newPosition * 1000).toInt()));
   }
 
-  void initVolumeController() {
-    final volumeController =  VolumeController();
-    // volumeController.listener((volume) {      
-    //   setState(() {
-    //     _currentVolume = volume;
-    //   });
-    // });
-    volumeController.showSystemUI = true;
-    volumeController.getVolume().then((volume) {
-      logger.i("Got current volume: $volume");
-      setState(() {
-        _currentVolume = volume;
-      });
-    });
-  }
-
   void onControlsTapped() {
     logger.i("Got tapp on player");
 
@@ -296,11 +286,37 @@ extension on _PlayerViewState {
     releaseControlTimer();
     _isLanscape = !_isLanscape;
     widget.onFullscreen?.call(_isLanscape);
-    final orientation = _isLanscape ? DeviceOrientation.landscapeLeft : DeviceOrientation.portraitUp;
+    final orientation = _isLanscape ? DeviceOrientation.landscapeRight : DeviceOrientation.portraitUp;
     SystemChrome.setPreferredOrientations([
       orientation
     ]);
     createControlTimer();
+  }
+
+  void initVolumeController() {
+    final volumeController =  VolumeController();
+    volumeController.listener((volume) {  
+      if(_isChangingVolume) {
+        return;
+      }
+      setState(() {
+        _currentVolume = volume;
+      });
+    });
+    volumeController.showSystemUI = true;
+    volumeController.getVolume().then((volume) {
+      logger.i("Got current volume: $volume");
+      setState(() {
+        _currentVolume = volume;
+      });
+    });
+  }
+
+  void initBrightness() async {
+    final brightness = await widget.player.brightness ?? 0;  
+    setState(() {
+      _currentBrightness = brightness;
+    },);    
   }
 }
 
@@ -409,7 +425,8 @@ extension on _PlayerViewState {
 
                       const SizedBox(width: 24,),
 
-                      _VerticalSeekBar(topIcon: Assets.icPlayerBrightness, initialValue: 0.5, onStart: releaseControlTimer, onEnd: createControlTimer, onUpdate: (value) {
+                      _VerticalSeekBar(topIcon: Assets.icPlayerBrightness, initialValue: _currentBrightness, onStart: releaseControlTimer, onEnd: (value) => createControlTimer, onUpdate: (value) {
+                        _currentBrightness = value;
                         widget.player.setBrightness(value);
                       }),
 
@@ -456,11 +473,16 @@ extension on _PlayerViewState {
 
                       const Spacer(),
 
-                      _VerticalSeekBar(topIcon: Assets.icPlayerVolume, initialValue: _currentVolume, onStart: releaseControlTimer, onEnd: createControlTimer,  onUpdate: (volume) {
-                        setState(() {
-                          // _currentVolume = volume;
-                          VolumeController().setVolume(_currentVolume);                          
-                        },);
+                      _VerticalSeekBar(topIcon: Assets.icPlayerVolume, initialValue: _currentVolume, onStart: () {
+                        _isChangingVolume = true;
+                        releaseControlTimer();
+                      }, onEnd: (volume) {                        
+                        createControlTimer();
+                        _isChangingVolume = false;
+                      },  onUpdate: (volume) {  
+                        _currentVolume = volume;
+                        // widget.player.setVolume(volume);
+                        VolumeController().setVolume(volume);                        
                       },),
 
                       const SizedBox(width: 24,),
@@ -476,7 +498,7 @@ class _VerticalSeekBar extends StatefulWidget {
   final String topIcon;
   final double initialValue;
   final void Function()? onStart;
-  final void Function()? onEnd;
+  final void Function(double)? onEnd;
   final void Function(double) onUpdate;
 
   const _VerticalSeekBar({required this.topIcon, required this.initialValue, required this.onUpdate, this.onStart, this.onEnd });
@@ -515,7 +537,7 @@ class _VerticalSeekBarState extends State<_VerticalSeekBar> {
       onVerticalDragStart: (details) {
         widget.onStart?.call();
       },
-      onVerticalDragUpdate: (details) {
+      onVerticalDragUpdate: (details) async {
         final offset = details.delta;
         // final step = 0.01 * maxProgress;
         setState(() {
@@ -526,12 +548,11 @@ class _VerticalSeekBarState extends State<_VerticalSeekBar> {
           if(_progress > maxProgress) {
             _progress = maxProgress;
           }
-          final brightness = _progress / maxProgress;
-          widget.onUpdate(brightness);
+          widget.onUpdate(_progress / maxProgress);
         });        
       },
       onVerticalDragEnd: (details) {
-        widget.onEnd?.call();
+        widget.onEnd?.call(_progress / maxProgress);
       },
       child: Container(
               padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 12),

@@ -6,6 +6,7 @@ import android.content.Context.WINDOW_SERVICE
 import android.content.ContextWrapper
 import android.content.MutableContextWrapper
 import android.net.Uri
+import android.provider.Settings
 import android.view.View
 import android.view.WindowManager
 import androidx.annotation.OptIn
@@ -118,6 +119,11 @@ val NativePlayerView.handleMethodCall: MethodChannel.MethodCallHandler
                         val show = params["value"] as Boolean
                         videoView.useController = show
                     }
+
+                    "changeVolume" -> {
+                        val volume = params["value"] as Double
+                        player?.volume = volume.toFloat()
+                    }
                 }
 
                 result.success(true)
@@ -163,6 +169,19 @@ val NativePlayerView.handleMethodCall: MethodChannel.MethodCallHandler
                     layoutParams.screenBrightness = brightness.toFloat()
                     it.window.attributes = layoutParams
                 }
+            }
+
+            MethodCalls.getBrightness -> {
+                val brightness = try {
+                    // Get the current brightness level (0 to 255)
+                    val contentResolver = context.contentResolver
+                    Settings.System.getInt(contentResolver, Settings.System.SCREEN_BRIGHTNESS)
+                } catch (e: Settings.SettingNotFoundException) {
+                    e.printStackTrace()
+                    // Handle exception if brightness setting is not found
+                    0
+                }
+                result.success(brightness.toDouble())
             }
 
             else -> {
@@ -243,7 +262,7 @@ fun NativePlayerView.createMediaSource(creationParams: Map<*, *>): MediaSource {
     when(moviePlatform) {
         MoviePlatform.disney -> {
             val token = metadata["token"] as String
-            val disneyMediaDrmCallback = DisneyDrmCallback(binaryMessenger, licenseKeyUrl!!, dataSourceFactory, token)
+            val disneyMediaDrmCallback = DisneyDrmCallback(methodChannel, licenseKeyUrl!!, dataSourceFactory, token)
             val drmSessionManager = DefaultDrmSessionManager.Builder().build(disneyMediaDrmCallback)
 
             val hlsMediaSource =

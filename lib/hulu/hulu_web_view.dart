@@ -30,11 +30,17 @@ class _HuluState extends PlatformState<HuluWebView> {
       if(movieId != null) {
         logger.i("Got movie id: $movieId");
         _isGotMovie = true;
+        toggleLoading(true);
         final (token, deviceToken) = await getWebToken(url);        
         if(token == null || deviceToken == null) {
+          toggleLoading(false);
           return;
         }
-        toggleLoading(true);
+        const jsCode = """
+                        let element = document.querySelector(".CloseButton");
+                        element.click();
+                       """;
+        // runJavascript(jsCode);
         await dataCacheManager.cache(CacheDataKey.hulu_access_token, token);
         await dataCacheManager.cache(CacheDataKey.hulu_device_token, deviceToken);
         try {

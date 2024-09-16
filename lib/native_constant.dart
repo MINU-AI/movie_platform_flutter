@@ -22,6 +22,7 @@ enum MethodCalls {
   getBufferedPosition,
   getBufferedPercentage,
   setBrightness,
+  getBrightness,
   controlPlayer;
 
   static MethodCalls fromString(String methodName) {
@@ -44,6 +45,8 @@ enum MethodCalls {
         return getBufferedPosition;
       case "setBrightness":
         return setBrightness;
+      case "getBrightness":
+        return getBrightness;
       default:
         throw "Unsupported method call :$methodName";
     }
@@ -56,5 +59,6 @@ enum PlayerControlAction {
   seek,
   stop,
   showControl,
-  changePlayback
+  changePlayback,
+  changeVolume
 }

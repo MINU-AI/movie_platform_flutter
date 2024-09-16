@@ -55,6 +55,12 @@ class DrmPlayer {
     channel.invokeMethod(MethodCalls.controlPlayer.name, { "action" : PlayerControlAction.showControl.name, "value" : show });
   }
 
+  void setVolume(double volume) {
+    channel.invokeMethod(MethodCalls.controlPlayer.name, {"action" : PlayerControlAction.changeVolume.name, "value" : volume });
+  }
+
+  Future<double?> get brightness => channel.invokeMethod(MethodCalls.getBrightness.name);
+
   Future<int?> get duration => channel.invokeMethod(MethodCalls.getDuration.name);
 
   Future<int?> get currentPosition => channel.invokeMethod(MethodCalls.getCurrentPosition.name);
@@ -103,7 +109,7 @@ class DrmPlayer {
       case MethodCalls.onPlayingChange:
         final data = call.arguments;
         final isPlaying = data["isPlaying"] as bool;
-        logger.i("Got onPlayingChange: $isPlaying");
+        // logger.i("Got onPlayingChange: $isPlaying");
         for(final listener in _listeners) {
           listener.onPlayingChange(isPlaying);
         }

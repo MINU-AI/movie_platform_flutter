@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:collection/collection.dart';
 import 'package:player/logger.dart';
 import 'package:player/player.dart';
@@ -31,14 +33,14 @@ class PrimeApi extends MoviePlatformApi {
             "subtitleFormat": "TTMLv2",
             "resourceUsage": "ImmediateConsumption",
             "consumptionType": "Streaming",
-            "deviceDrmOverride": "CENC",
-            "deviceStreamingTechnologyOverride": "DASH",
+            "deviceDrmOverride": Platform.isAndroid ? "CENC" : "FairPlay",
+            "deviceStreamingTechnologyOverride": Platform.isAndroid ? "DASH" : "HLS",
             "deviceProtocolOverride": "Https",
-            "deviceBitrateAdaptationsOverride": "CBR",
+            "deviceBitrateAdaptationsOverride": Platform.isAndroid ? "CBR" : "CBR,CVBR",
             "audioTrackId": "all",
             "languageFeature": "MLFv2",
             "videoMaterialType": "Feature",
-            "desiredResources": "PlaybackUrls,SubtitleUrls,ForcedNarratives",
+            "desiredResources": Platform.isAndroid ? "PlaybackUrls,SubtitleUrls,ForcedNarratives" : "FairPlayApplicationCertificate,PlaybackUrls,SubtitleUrls,ForcedNarratives,TransitionTimecodes",
             "supportedDRMKeyScheme": "DUAL_KEY",
             "deviceVideoCodecOverride": "H264",
 //            "deviceVideoQualityOverride": "HD",
@@ -49,13 +51,20 @@ class PrimeApi extends MoviePlatformApi {
     };
     final response = await get(endpoint, headers: headers, params: requestParams);
     logger.i("Got movie playback: $response");
+    final defaultUrlSetId = response["playbackUrls"]["defaultUrlSetId"];
+
     final urlSets = response["playbackUrls"]["urlSets"] as Map<String, dynamic>;
-    final firstKey = urlSets.keys.first;
+    final firstKey = defaultUrlSetId ?? urlSets.keys.first;
     final urlData = urlSets[firstKey];
     final playbackUrl = urlData["urls"]["manifest"]["url"];
-    logger.i("Got playback url: $playbackUrl");
 
-    return MoviePlayback(playbackUrl:  playbackUrl);
+    logger.i("Got playback url: $playbackUrl");
+    String? certificateUrl;
+    if(Platform.isIOS) {
+      certificateUrl = response["fairPlayApplicationCertificate"]["encodedApplicationCertificate"];
+    }
+
+    return MoviePlayback(playbackUrl:  playbackUrl, licenseCertificateUrl: certificateUrl);
   }
 
   @override

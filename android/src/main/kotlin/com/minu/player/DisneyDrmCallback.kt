@@ -22,7 +22,7 @@ import java.util.UUID
 
 @UnstableApi
 class DisneyDrmCallback(
-    private val binaryMessenger: BinaryMessenger,
+    private val channel: MethodChannel,
     private val licenseUrl: String,
     private val dataSourceFactory: HttpDataSource.Factory,
     private  var token: String,
@@ -78,7 +78,7 @@ class DisneyDrmCallback(
                     401 -> {
                         token = ""
                         Handler(Looper.getMainLooper()).post {
-                            MethodChannel(binaryMessenger, platformChannel).invokeMethod(MethodCalls.refreshToken.name, MoviePlatform.disney.name, object: MethodChannel.Result {
+                            channel.invokeMethod(MethodCalls.refreshToken.name, MoviePlatform.disney.name, object: MethodChannel.Result {
                                 override fun success(result: Any?) {
                                     Log.i(TAG, "Call native method succeeded: $result")
                                     (result as String?)?.let { newToken ->

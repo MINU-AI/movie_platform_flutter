@@ -51,9 +51,7 @@ public class NativePlayerView: NSObject, FlutterPlatformView {
     private var systemBrightness: Double?
     
     private var keyLoader: FairplayKeyLoader?
-    
-    private lazy var contentKeySession = AVContentKeySession(keySystem: .fairPlayStreaming)
-    
+        
     public func view() -> UIView {
         playerView.player = player
         return playerView
@@ -62,6 +60,7 @@ public class NativePlayerView: NSObject, FlutterPlatformView {
     deinit {
         player?.removeObserver(self, forKeyPath: "timeControlStatus")
         player?.removeObserver(self, forKeyPath: "status")
+        activateAudioSession(activate: false)
         if let systemBrightness = systemBrightness {
             UIScreen.main.brightness = systemBrightness
         }
@@ -79,9 +78,8 @@ extension NativePlayerView {
         let moviePlatform: MoviePlatform = try! .init(rawValue: platformId)
         let asset = AVURLAsset(url: URL(string: playbackUrl)!)
         if moviePlatform != .youtube {
-            keyLoader = try FairplayKeyLoader.create(fromMoviePlatform: moviePlatform, certificateURL: certificateUrl!, licenseUrl: licenseKeyUrl!, metadata: metadata)
-            contentKeySession.setDelegate(keyLoader, queue: DispatchQueue(label: "ContentSessionKey"))
-            contentKeySession.addContentKeyRecipient(asset)
+            keyLoader = try FairplayKeyLoader.create(fromMoviePlatform: moviePlatform, certificateURL: certificateUrl!, licenseUrl: licenseKeyUrl, channel: channel, metadata: metadata)
+            asset.resourceLoader.setDelegate(keyLoader, queue: DispatchQueue(label: "KeyLoaderQueue"))
         }
         return AVPlayerItem(asset: asset)
     }
@@ -91,6 +89,7 @@ extension NativePlayerView {
         player = AVPlayer(playerItem: playItem)
         player?.addObserver(self, forKeyPath: "timeControlStatus", options: [.new], context: nil)
         player?.addObserver(self, forKeyPath: "status", options: [.new], context: nil)
+        activateAudioSession(activate: true)
         player?.play()
     }
     
@@ -103,14 +102,23 @@ extension NativePlayerView {
                 print("Got player playing change: \(isPlaying)")
                 let arguments = ["isPlaying": isPlaying]
                 channel.invokeMethod(MethodCalls.onPlayingChange.rawValue, arguments: arguments)
+                var playerState: PlayerState?
+                
+                switch timeControlStatus {
+                case AVPlayer.TimeControlStatus.waitingToPlayAtSpecifiedRate.rawValue:
+                    playerState = .buffering
+                case AVPlayer.TimeControlStatus.playing.rawValue:
+                    playerState = .ready
+                default: break
+                }
+                if let playerState = playerState {
+                    channel.invokeMethod(MethodCalls.onPlaybackStateChanged.rawValue, arguments: playerState.rawValue)
+                }
             }
         case "status":
             if let status = change?[NSKeyValueChangeKey.newKey] as? Int {
-                let playbackState = status == 1 ? 3 : 4
-                print("Got status change: \(status), \(playbackState)")
+                print("Got status change: \(status)")
                 switch status {
-                case AVPlayer.Status.readyToPlay.rawValue:
-                    player?.play()
                 case AVPlayer.Status.failed.rawValue:
                     var argument: [String:Any] = [:]
                     argument["errorCode"] = 1
@@ -120,8 +128,6 @@ extension NativePlayerView {
                 default:
                     break
                 }
-                
-                channel.invokeMethod(MethodCalls.onPlaybackStateChanged.rawValue, arguments: playbackState)
             }
         default: return
         }
@@ -154,6 +160,19 @@ extension NativePlayerView {
 
         return 0.0
     }
+    
+    func activateAudioSession(activate: Bool) {
+        let audioSession = AVAudioSession.sharedInstance()
+        do {
+            // Set the audio session category to allow media playback
+            try audioSession.setCategory(.playback, mode: .moviePlayback, options: [])
+            
+            // Activate the audio session
+            try audioSession.setActive(activate)
+        } catch {
+            print("Failed to activate audio session: \(error.localizedDescription)")
+        }
+    }
 }
 
 extension NativePlayerView {
@@ -178,6 +197,9 @@ extension NativePlayerView {
                     let playerItem = try! self?.createPlayerItem(creationParams: passedParams)
                     self?.player?.replaceCurrentItem(with: playerItem)
                     self?.player?.play()
+                case "changeVolume":
+                    let volume = params["value"] as! Double
+                    self?.player?.volume = Float(volume)
                     
                 default:
                     print("Unsupported action: \(action)")
@@ -198,6 +220,10 @@ extension NativePlayerView {
                 let brightness = params["value"] as! Double
                 self?.systemBrightness = UIScreen.main.brightness
                 UIScreen.main.brightness = brightness
+            case .getBrightness:
+                let brightness = Double(UIScreen.main.brightness)
+                result(brightness)
+            
             default:
                 print("Unsupported method: \(methodName)")
                 
@@ -212,71 +238,61 @@ extension NativePlayerView {
 }
 
 
-class FairplayKeyLoader: NSObject, AVContentKeySessionDelegate {
+class FairplayKeyLoader: NSObject, AVAssetResourceLoaderDelegate {
     var certificateURL: String
-    var licenseURL: String
+    var licenseURL: String?
     var metadata: [String:Any]?
     
-    fileprivate init(licenseURL: String, certificateURL: String, metadata: [String:Any]? = nil) {
+    fileprivate init(licenseURL: String?, certificateURL: String, metadata: [String:Any]? = nil) {
         self.licenseURL = licenseURL
         self.certificateURL = certificateURL
         self.metadata = metadata
         super.init()
     }
     
-    static func create(fromMoviePlatform platform: MoviePlatform, certificateURL: String, licenseUrl: String, metadata: [String:Any]? = nil) throws -> FairplayKeyLoader{
+    static func create(fromMoviePlatform platform: MoviePlatform, certificateURL: String, licenseUrl: String?, channel: FlutterMethodChannel, metadata: [String:Any]? = nil) throws -> FairplayKeyLoader{
         switch platform {
         case .hulu: return HuluKeyLoader(licenseURL: licenseUrl, certificateURL: certificateURL, metadata: metadata)
+        case .prime: return PrimeKeyLoader(licenseURL: licenseUrl, certificateURL: certificateURL, metadata: metadata)
+        case .disney: return DisneyKeyLoader(licenseURL: licenseUrl, certificateURL: certificateURL, channel: channel, metadata: metadata)
         default: throw "Unsupported movie platform: \(platform)"
         }
     }
     
-    public func contentKeySession(_ session: AVContentKeySession, didProvide keyRequest: AVContentKeyRequest) {
-        handleKeyRequest(keyRequest)
-    }
-    
-    func contentKeySession(_ session: AVContentKeySession, didProvideRenewingContentKeyRequest keyRequest: AVContentKeyRequest) {
-        handleKeyRequest(keyRequest)
-    }
-    
-    func contentKeySession(_ session: AVContentKeySession, contentKeyRequest keyRequest: AVContentKeyRequest, didFailWithError err: any Error) {
-        print("Got contentKeySession error: \(err)")
-    }
-    
-    private func handleKeyRequest(_ keyRequest: AVContentKeyRequest) {
-        do {
-            guard let contentKeyIdentifierString = keyRequest.identifier as? String,
-                  let contentKeyIdentifierURL = URL(string: contentKeyIdentifierString),
-                  let assetIDString = contentKeyIdentifierURL.host,
-                  let assetIDData = assetIDString.data(using: .utf8)
-            else {
-                throw "Failed to retrieve the assetID from the keyRequest"
-            }
-            
-            let certificateData = try getCertificateData()
-            var responseData: (Data?, Error?)?
-            let semaphore = DispatchSemaphore(value: 0)
-            keyRequest.makeStreamingContentKeyRequestData(forApp: certificateData, contentIdentifier: assetIDData) { data, error in
-                responseData = (data, error)
-                semaphore.signal()
-            }
-            _ = semaphore.wait(timeout: .distantFuture)
-            
-            guard let spcData = responseData!.0 else {
-                throw "spcData error: \(String(describing: responseData?.1))"
-            }
-            
-            let ckcData = try getCKCData(spc: spcData)
-            let keyResponse = AVContentKeyResponse(fairPlayStreamingKeyResponseData: ckcData)
-            keyRequest.processContentKeyResponse(keyResponse)
-        } catch {
-            print("Got contentKeySession error: \(error)")
-            keyRequest.processContentKeyResponseError(error)
+    func resourceLoader(_ resourceLoader: AVAssetResourceLoader, shouldWaitForLoadingOfRequestedResource loadingRequest: AVAssetResourceLoadingRequest) -> Bool {
+        guard let url = loadingRequest.request.url, url.scheme == "skd" else {
+            return false
         }
+        
+        return handleKeyRequest(loadingRequest)
+    }
+    
+    func getContentIdentifier(_ loadingRequest: AVAssetResourceLoadingRequest) throws -> Data {
+        guard let url = loadingRequest.request.url, let host = url.host else {
+            throw "Got handleKeyRequest: host data is nil"
+        }
+        return host.data(using: .utf8)!
+    }
+    
+    private func handleKeyRequest(_ loadingRequest: AVAssetResourceLoadingRequest) -> Bool {
+        do {
+            let contentIdentifier = try getContentIdentifier(loadingRequest)
+            let host = loadingRequest.request.url!.host!
+            let certificateData = try getCertificateData()
+            let spcData = try loadingRequest.streamingContentKeyRequestData(forApp: certificateData, contentIdentifier: contentIdentifier, options: nil)
+            let ckcData = try getCKCData(spc: spcData, assetID: host)
+            loadingRequest.dataRequest?.respond(with: ckcData)
+            loadingRequest.finishLoading()
+            return true
+        } catch {
+            print("Got handleKeyRequest: error \(error) ")
+            loadingRequest.finishLoading(with: error)
+        }
+        return false
     }
     
     
-    func getCKCData(spc: Data) throws -> Data {
+    func getCKCData(spc: Data, assetID: String) throws -> Data {
         throw "Unimplemented"
     }
     
@@ -300,12 +316,12 @@ class FairplayKeyLoader: NSObject, AVContentKeySessionDelegate {
 }
 
 class HuluKeyLoader: FairplayKeyLoader {
-    override func getCKCData(spc: Data) throws -> Data {
+    override func getCKCData(spc: Data, assetID: String) throws -> Data {
         // Send SPC to the FairPlay license server and receive CKC
         let token = metadata?["token"] as! String
         let base64String = spc.base64EncodedString()
 
-        var request = URLRequest(url: URL(string: licenseURL)!)
+        var request = URLRequest(url: URL(string: licenseURL!)!)
         request.addValue("text/plain;charset=UTF-8", forHTTPHeaderField: "Content-Type")
         request.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         request.httpMethod = "POST"
@@ -323,6 +339,123 @@ class HuluKeyLoader: FairplayKeyLoader {
         try validateReponse(data: responseData?.0, response: responseData?.1, error: responseData?.2)
         let ckcData = Data(base64Encoded: String(data: responseData!.0!, encoding: .utf8)!)!
         return ckcData
+    }
+}
+
+class PrimeKeyLoader: FairplayKeyLoader {
+    override func getCertificateData() throws -> Data {
+        return Data(base64Encoded: certificateURL)!
+    }
+    
+    override func getContentIdentifier(_ loadingRequest: AVAssetResourceLoadingRequest) throws -> Data {
+        return loadingRequest.request.url!.absoluteString.data(using: .utf8)!
+    }
+    
+    override func getCKCData(spc: Data, assetID: String) throws -> Data {
+        let base64String = spc.base64EncodedString()
+        
+        let deviceId = metadata?["deviceId"] as! String
+        let mid = metadata?["mid"] as! String
+        let cookies = metadata?["cookies"] as! String
+        let movieId = metadata?["movieId"] as! String
+                
+        let requestData = "fairPlayChallenge=\(base64String)&fairPlayKeyId=skd://\(assetID)".addingPercentEncoding(withAllowedCharacters: .urlHostAllowed)!.replacingOccurrences(of: "+", with: "%2B").data(using: .utf8)!
+        
+        let endpoint = "https://atv-ps.amazon.com/cdp/catalog/GetPlaybackResources"
+        
+        let httpHeaders = [
+            "Cookie": cookies,
+            "Content-Type": "application/x-www-form-urlencoded"
+        ]
+        
+        let params = [
+            "asin": movieId,
+            "deviceTypeID": "AOAGZA014O5RE",
+            "firmware": "1",
+            "deviceID": deviceId,
+            "marketplaceID": mid,
+            "format": "json",
+            "version": "2",
+            "resourceUsage": "ImmediateConsumption",
+            "consumptionType": "Streaming",
+            "deviceDrmOverride": "FairPlay",
+            "deviceStreamingTechnologyOverride": "HLS",
+            "deviceProtocolOverride": "Https",
+            "deviceBitrateAdaptationsOverride": "CBR,CVBR",
+            "videoMaterialType": "Feature",
+            "desiredResources": "FairPlayLicense",
+//            "deviceVideoCodecOverride": "H264",
+//            "deviceVideoQualityOverride": "HD",
+//            "operatingSystemName": "Mac OS X",
+            "gascEnabled": "false"
+            // add gascEnabled because we used fe
+        ]
+        
+        let (data, response, error) = URLSession.shared.synchronousPOSTDataTask(with: endpoint, parameters: params, body: requestData, httpHeaders: httpHeaders)
+
+        try validateReponse(data: data, response: response, error: error)
+        
+        if let jsonData = try JSONSerialization.jsonObject(with: data!, options: []) as? [String:Any] {
+            if let error = jsonData["error"] as? [String:Any] {
+                throw "Got response with error: \(error)"
+            }
+            
+            if let fairPlayLicense = jsonData["fairPlayLicense"] as? [String:Any], let encodedLicenseResponse = fairPlayLicense["encodedLicenseResponse"] as? String {
+                return Data(base64Encoded: encodedLicenseResponse)!
+            }
+        }
+        
+        throw "Got ckcData error: Invalid response format"
+    }
+}
+
+class DisneyKeyLoader: FairplayKeyLoader {
+    let channel: FlutterMethodChannel
+    var token = ""
+    
+    init(licenseURL: String?, certificateURL: String, channel: FlutterMethodChannel, metadata: [String : Any]? = nil) {
+        self.channel = channel
+        super.init(licenseURL: licenseURL, certificateURL: certificateURL, metadata: metadata)
+        token = metadata?["token"] as! String
+    }
+    
+    override func getCKCData(spc: Data, assetID: String) throws -> Data {
+        
+        let httpHeaders = [
+            "Content-Type": "application/octet-stream",
+            "X-BAMSDK-Platform": "apple/ios/iphone",
+            "Accept": "application/json, application/vnd.media-service+json; version=2",
+            "X-BAMSDK-Client-ID": "disney-svod-3d9324fc",
+            "X-DSS-Edge-Accept": "vnd.dss.edge+json; version=2",
+            "Authorization": "Bearer \(token)"
+        ]
+        
+        let (data, response, error) = URLSession.shared.synchronousPOSTDataTask(with: licenseURL!, body: spc, httpHeaders: httpHeaders)
+        
+        try validateReponse(data: data, response: response, error: error)
+        
+        if let jsonData = try? JSONSerialization.jsonObject(with: data!) as? [String:Any] {
+            if let errors = jsonData["errors"] as? [[String:Any]], !errors.isEmpty, let code = errors.first?["code"] as? String, code == "access-token.invalid" {
+                print("Got invalid access token")
+                let semaphore = DispatchSemaphore(value: 0)
+                DispatchQueue.main.async { [weak self] in
+                    self?.channel.invokeMethod(MethodCalls.refreshToken.rawValue, arguments: MoviePlatform.disney.rawValue) { result in
+                        if let token = result as? String {
+                            self?.token = token
+                        }
+                        semaphore.signal()
+                    }
+                }
+                _ = semaphore.wait(timeout: .distantFuture)
+                return try getCKCData(spc: spc, assetID: assetID)
+            }
+            
+            if let ckc = jsonData["ckc"] as? String {
+                return Data(base64Encoded: ckc)!
+            }
+        }
+        
+        throw "Got ckc data error"
     }
 }
 
@@ -383,6 +516,7 @@ public enum MethodCalls: String {
     case getBufferedPercentage
     case setBrightness
     case controlPlayer
+    case getBrightness
     
     public init(rawValue: String) throws {
         switch rawValue {
@@ -396,13 +530,95 @@ public enum MethodCalls: String {
         case "getBufferedPercentage": self = .getBufferedPercentage
         case "setBrightness": self = .setBrightness
         case "controlPlayer": self = .controlPlayer
+        case "getBrightness": self = .getBrightness
         default: throw "Unsupported method call: \(rawValue)"
         }
     }
 }
 
+enum PlayerState: Int {
+    case idle = 1
+    case buffering = 2
+    case ready = 3
+    case end = 4
+}
+
 let platformChannel = "com.minu.player/channel"
 
 extension String: Error {
+}
+
+extension URLSession {
+    func synchronousPOSTDataTask(with urlString: String, parameters: [String: String] = [:], body requestData: Data, httpHeaders: [String: String]) -> (Data?, URLResponse?, Error?) {
+        var data: Data?
+        var response: URLResponse?
+        var error: Error?
+        
+        let semaphore = DispatchSemaphore(value: 0)
+        
+        var components = URLComponents(string: urlString)!
+        
+        if (!parameters.isEmpty) {
+            components.queryItems = parameters.map { (key, value) in
+                URLQueryItem(name: key, value: value)
+            }
+            components.percentEncodedQuery = components.percentEncodedQuery?.replacingOccurrences(of: "+", with: "%2B")
+        }
+        
+        var request = URLRequest(url: components.url!)
+        request.httpMethod = "POST"
+        for (key, value) in httpHeaders {
+            request.setValue(value, forHTTPHeaderField: key)
+        }
+        
+        request.httpBody = requestData
+
+        let dataTask = self.dataTask(with: request) {
+            data = $0
+            response = $1
+            error = $2
+
+            semaphore.signal()
+        }
+        dataTask.resume()
+
+        _ = semaphore.wait(timeout: .distantFuture)
+
+        return (data, response, error)
+    }
+    
+    func synchronousGETDataTask(with urlString: String, parameters: [String: String], httpHeaders: [String: String]) -> (Data?, URLResponse?, Error?) {
+        var data: Data?
+        var response: URLResponse?
+        var error: Error?
+        
+        let semaphore = DispatchSemaphore(value: 0)
+        
+        var components = URLComponents(string: urlString)!
+        components.queryItems = parameters.map { (key, value) in
+            URLQueryItem(name: key, value: value)
+        }
+        components.percentEncodedQuery = components.percentEncodedQuery?.replacingOccurrences(of: "+", with: "%2B")
+        
+        var request = URLRequest(url: components.url!)
+        
+        request.httpMethod = "GET"
+        for (key, value) in httpHeaders {
+            request.setValue(value, forHTTPHeaderField: key)
+        }
+
+        let dataTask = self.dataTask(with: request) {
+            data = $0
+            response = $1
+            error = $2
+
+            semaphore.signal()
+        }
+        dataTask.resume()
+
+        _ = semaphore.wait(timeout: .distantFuture)
+
+        return (data, response, error)
+    }
 }
 
