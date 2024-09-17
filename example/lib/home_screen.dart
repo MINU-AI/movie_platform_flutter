@@ -31,7 +31,7 @@ class _HomeState extends State<HomeScreen> {
           SizedBox(
             width: screenWidth,
             height: _isLandscape ? screenHeight : 9 / 16 * screenWidth,
-            child: _player != null ? PlayerView.create(player: _player!, onFullscreen: (isLandscape) {
+            child: _player != null ? PlayerView.create(player: _player!, showFullscreen: false, onFullscreen: (isLandscape) {
               setState(() {
                 _isLandscape = isLandscape;
               });

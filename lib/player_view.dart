@@ -182,7 +182,7 @@ extension on _PlayerViewState {
       if(currentPosition == null || duration == null || bufferedPercentage == null) {
         return;
       }
-      logger.i("Got currentPosition: $currentPosition, $bufferedPercentage");
+      // logger.i("Got currentPosition: $currentPosition, $bufferedPercentage");
       final newBufferWidth = (bufferedPercentage / 100.0) * seekBarWidth;
       if(newBufferWidth != _progressBufferWidth) {
           final animationDuration = ((_progressBufferWidth - newBufferWidth).abs() / seekBarWidth) * _animationDuration;
@@ -416,7 +416,7 @@ extension on _PlayerViewState {
                       onPressed: onFullscreenTapped,                      
                       child: const Padding(padding: EdgeInsets.all(8), child: Image(image: AssetImage(Assets.icFullscreen), width: 24, height: 24,),)
                       
-                    ) : const SizedBox(),                    
+                    ) : const SizedBox(height: 12,),                    
 
                   ],
                 ),

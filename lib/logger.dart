@@ -25,16 +25,12 @@ class _DefaultLogger extends Logger {
   
   @override
   void i<T>(T data) {
-    if (kDebugMode) {
-      print("\x1B[34m$data\x1B[0m");
-    }
+    log(data);
   }
   
   @override
   void e<T>(T data) {
-    if (kDebugMode) {
-      print("\x1B[$data\x1B[0m");
-    }
+    log(data);
   }
   
 }
