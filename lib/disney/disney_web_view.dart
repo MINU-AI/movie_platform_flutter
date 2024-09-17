@@ -57,7 +57,7 @@ class _DisneyState extends PlatformState<DisneyWebView> {
         try {       
           final movieInfo = await platformApi.getMovieInfo(contentId);          
           // logger.i("Get movie info: $movieInfo");        
-          final moviePlayback = await platformApi.getPlaybackUrl([contentId]);
+          final moviePlayback = await platformApi.getPlaybackUrl(contentId);
           final token = await dataCacheManager.get(CacheDataKey.disney_video_access_token);
           final refreshToken = await dataCacheManager.get(CacheDataKey.disney_refresh_token);
           final Map<String, dynamic> metadata = {"token" : token, "refreshToken" : refreshToken };

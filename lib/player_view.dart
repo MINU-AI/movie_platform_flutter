@@ -72,8 +72,7 @@ class _PlayerViewState extends State<PlayerView> with PlayerListener, TickerProv
   @override
   void initState() {
     widget.player.addListener(this);    
-    initVolumeController();
-    initBrightness();
+    initVolumeController();    
     super.initState();
   }
 
@@ -161,6 +160,7 @@ class _PlayerViewState extends State<PlayerView> with PlayerListener, TickerProv
   @override
   void onPlayingChange(bool isPlaying) {
     _isPlaying = isPlaying;
+    initBrightness();
     if(isPlaying && _isSeeking != true){
       createUpdatePlayerTimer(); 
     }    

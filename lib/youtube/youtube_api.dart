@@ -20,9 +20,8 @@ class YoutubeApi extends MoviePlatformApi {
   }
 
   @override
-  Future<MoviePlayback> getPlaybackUrl(List params) async {
-    final watchId = params[0] as String;
-    final response = await _getVideoMetadata(watchId);
+  Future<MoviePlayback> getPlaybackUrl(String movieId) async {    
+    final response = await _getVideoMetadata(movieId);
     final playbackUrl = response["streamingData"]["hlsManifestUrl"];
 
     return MoviePlayback(playbackUrl: playbackUrl);

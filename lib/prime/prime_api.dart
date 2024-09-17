@@ -14,9 +14,8 @@ class PrimeApi extends MoviePlatformApi {
   }
 
   @override
-  Future<MoviePlayback> getPlaybackUrl(List<dynamic> params) async {
-    final movieId = params[0] as String;
-    final cookies = params[1] as String;
+  Future<MoviePlayback> getPlaybackUrl(String movieId) async {    
+    final cookies = await dataCacheManager.get(CacheDataKey.prime_cookies) as String;
     _userProfile ??= await _getUserProfile();
 
     const endpoint = "https://atv-ps.amazon.com/cdp/catalog/GetPlaybackResources";

@@ -128,7 +128,7 @@ extension on _PrimeState {
       final movieInfo = _extractMovieInfo(document, movieId: movieId, episode: episode);
       logger.i("Got movie title: $movieInfo");
       final cookies = await _getCookies();
-      final moviePlayback = await platformApi.getPlaybackUrl([movieId, cookies]);
+      final moviePlayback = await platformApi.getPlaybackUrl(movieId);
       final Map<String, dynamic> metadata = { "cookies" : cookies, "movieId" : movieId };
       metadata.addAll(platformApi.metadata);
       final moviePayload = MoviePayload(playback: moviePlayback, info: movieInfo, metadata: metadata);
@@ -167,6 +167,7 @@ extension on _PrimeState {
       cookies += "${cookie.name}=${cookie.value};";
     }
     logger.i("Got cookies: $cookies");
+    await dataCacheManager.cache(CacheDataKey.prime_cookies, cookies);
     return cookies;
   }
 

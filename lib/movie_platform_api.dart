@@ -10,7 +10,7 @@ import 'disney/disney_api.dart';
 abstract class MoviePlatformApi with NetworkService {
   Future<MovieInfo> getMovieInfo(String movieId);
 
-  Future<MoviePlayback> getPlaybackUrl(List<dynamic> params);
+  Future<MoviePlayback> getPlaybackUrl(String movieId);
 
   Future<dynamic> getToken({ List<dynamic>? params });
 

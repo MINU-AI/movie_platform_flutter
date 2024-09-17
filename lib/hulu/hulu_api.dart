@@ -55,9 +55,8 @@ class HuluApi extends MoviePlatformApi {
   }
 
   @override
-  Future<MoviePlayback> getPlaybackUrl(List params) async {
-    final token = await cacheManager.get(CacheDataKey.hulu_access_token);
-    final movieId = params[0] as String;
+  Future<MoviePlayback> getPlaybackUrl(String movieId) async {
+    final token = await cacheManager.get(CacheDataKey.hulu_access_token);    
     final eabId = await _getEabId(movieId);
     final payload = {
       "content_eab_id" : eabId,

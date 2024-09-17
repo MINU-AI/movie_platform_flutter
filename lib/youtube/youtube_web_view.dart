@@ -42,7 +42,7 @@ class _YoutubeState extends PlatformState<YoutubeWebView> {
         try {
           final movieInfo = await platformApi.getMovieInfo(watchId);
           logger.i("Got movie info: $movieInfo");
-          final moviePlayback = await platformApi.getPlaybackUrl([watchId]);
+          final moviePlayback = await platformApi.getPlaybackUrl(watchId);
           logger.i("Got movie playback: $moviePlayback");
           final payload = MoviePayload(playback: moviePlayback, info: movieInfo, metadata: platformApi.metadata);
           popScreen(payload);

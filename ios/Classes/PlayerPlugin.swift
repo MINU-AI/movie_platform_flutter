@@ -207,6 +207,7 @@ extension NativePlayerView {
             case .getDuration:
                 let duration = self?.player?.currentItem?.duration ?? .zero
                 if duration.value == .zero || duration.timescale == .zero {
+                    result(0)
                     return
                 }
                 result(Int(duration.seconds) * 1000)
