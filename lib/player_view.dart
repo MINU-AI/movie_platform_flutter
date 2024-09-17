@@ -18,19 +18,20 @@ abstract class PlayerView extends StatefulWidget {
   final PlatformViewType viewType = PlatformViewType.widevinePlayer;
   final DrmPlayer player;
   final bool showFullScreen;
+  final bool showControl;
   final void Function(bool)? onFullscreen;
 
-  const PlayerView({super.key, required this.player, this.showFullScreen = true, this.onFullscreen });
+  const PlayerView({super.key, required this.player, this.showFullScreen = true, this.showControl = true, this.onFullscreen });
 
   Widget get nativePlayerView;
 
-  factory PlayerView.create({required DrmPlayer player, void Function(bool)? onFullscreen }) {
+  factory PlayerView.create({required DrmPlayer player, bool showFullscreen = true, bool showControl = true, void Function(bool)? onFullscreen }) {
     if(Platform.isAndroid) {
-      return _AndroidPlayerView(player: player, onFullscreen: onFullscreen, );
+      return _AndroidPlayerView(player: player, showFullScreen: showFullscreen, showControl: showControl, onFullscreen: onFullscreen, );
     }
 
     if(Platform.isIOS) {
-      return _IOSPlayerView(player: player, onFullscreen: onFullscreen,);
+      return _IOSPlayerView(player: player, showFullScreen: showFullscreen, showControl: showControl, onFullscreen: onFullscreen, );
     }
     throw "Unimplemented for this platform";
   }
@@ -96,7 +97,7 @@ class _PlayerViewState extends State<PlayerView> with PlayerListener, TickerProv
                 ),
 
                 Visibility(
-                  visible: _showControl,
+                  visible: widget.showControl && _showControl,
                   child: playerControlsView,
                 ),                                                  
               ],
@@ -601,7 +602,7 @@ class _VerticalSeekBarState extends State<_VerticalSeekBar> {
 
 class _AndroidPlayerView extends PlayerView {
   
-  const _AndroidPlayerView({required super.player, super.onFullscreen });
+  const _AndroidPlayerView({required super.player, super.showFullScreen, super.showControl, super.onFullscreen });
   
   @override
   Widget get nativePlayerView {
@@ -616,7 +617,7 @@ class _AndroidPlayerView extends PlayerView {
 }
 
 class _IOSPlayerView extends PlayerView {
-  const _IOSPlayerView({ required super.player, super.onFullscreen, });
+  const _IOSPlayerView({ required super.player, super.showFullScreen, super.showControl, super.onFullscreen, });
   
   @override
   Widget get nativePlayerView =>
