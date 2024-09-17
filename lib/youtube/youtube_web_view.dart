@@ -25,6 +25,13 @@ class _YoutubeState extends PlatformState<YoutubeWebView> {
   bool get loadUrlAtStartUp => false;
 
   @override
+  Map<String, String> get headers => {
+      "Cookie" : "GPS=1; YSC=HSS9zIANMbg; VISITOR_PRIVACY_METADATA=CgJWThIEGgAgTw%3D%3D; VISITOR_INFO1_LIVE=VdXIBwppj8o; VISITOR_PRIVACY_METADATA=CgJWThIEGgAgTw%3D%3D; PREF=f6=40000000&f4=4000000&f7=100;",
+      "Priority" : "u=0, i",
+      "Accept" : "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+    };
+
+  @override
   void initState() {
     super.initState();    
     loadWebView();
@@ -44,7 +51,7 @@ class _YoutubeState extends PlatformState<YoutubeWebView> {
           logger.i("Got movie info: $movieInfo");
           final moviePlayback = await platformApi.getPlaybackUrl(watchId);
           logger.i("Got movie playback: $moviePlayback");
-          final payload = MoviePayload(playback: moviePlayback, info: movieInfo, metadata: platformApi.metadata);
+          final payload = MoviePayload(playback: moviePlayback, info: movieInfo, metadata: await platformApi.metadata);
           popScreen(payload);
         } catch(e) {
           logger.e(e);

@@ -302,5 +302,14 @@ class HuluApi extends MoviePlatformApi {
     }
     return null;
   }
+
+  @override
+  Future<Map<String, dynamic>> get metadata async {
+    final token = await dataCacheManager.get(CacheDataKey.hulu_access_token);
+    final metadata = {
+      "token" : token,
+    };
+    return metadata;
+  }
   
 }

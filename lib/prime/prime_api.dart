@@ -7,6 +7,7 @@ import 'package:uuid/uuid.dart';
 
 class PrimeApi extends MoviePlatformApi {
   AmazonUserProfile? _userProfile;
+  late String movieId;
 
   @override
   Future<MovieInfo> getMovieInfo(String movieId) {
@@ -17,6 +18,7 @@ class PrimeApi extends MoviePlatformApi {
   Future<MoviePlayback> getPlaybackUrl(String movieId) async {    
     final cookies = await dataCacheManager.get(CacheDataKey.prime_cookies) as String;
     _userProfile ??= await _getUserProfile();
+    this.movieId = movieId;
 
     const endpoint = "https://atv-ps.amazon.com/cdp/catalog/GetPlaybackResources";
     final headers = { "Cookie" : cookies };
@@ -75,9 +77,19 @@ class PrimeApi extends MoviePlatformApi {
   Future refreshToken() {
     throw UnimplementedError();
   }
-  
+
   @override
-  get metadata => {"deviceId" : _userProfile?.deviceId, "mid" : _userProfile?.mid };
+  Future<Map<String, dynamic>> get metadata async {
+    final cookies = await dataCacheManager.get(CacheDataKey.prime_cookies);
+    final Map<String, dynamic> metadata = { "cookies" : cookies, "movieId" : movieId };
+    final params = {"deviceId" : _userProfile?.deviceId, "mid" : _userProfile?.mid };
+    metadata.addAll(params);
+
+    return Future.value(metadata);
+  }
+  
+  // @override
+  // get metadata => {"deviceId" : _userProfile?.deviceId, "mid" : _userProfile?.mid };
   
 }
 

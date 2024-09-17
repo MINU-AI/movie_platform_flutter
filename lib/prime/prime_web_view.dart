@@ -127,10 +127,9 @@ extension on _PrimeState {
     if(movieId != null) {
       final movieInfo = _extractMovieInfo(document, movieId: movieId, episode: episode);
       logger.i("Got movie title: $movieInfo");
-      final cookies = await _getCookies();
+      await _getCookies();
       final moviePlayback = await platformApi.getPlaybackUrl(movieId);
-      final Map<String, dynamic> metadata = { "cookies" : cookies, "movieId" : movieId };
-      metadata.addAll(platformApi.metadata);
+      final Map<String, dynamic> metadata = await platformApi.metadata;
       final moviePayload = MoviePayload(playback: moviePlayback, info: movieInfo, metadata: metadata);
       popScreen(moviePayload);
     }

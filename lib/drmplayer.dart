@@ -69,7 +69,7 @@ class DrmPlayer {
 
   Future<int?> get bufferedPercentage => channel.invokeMethod(MethodCalls.getBufferedPercentage.name);
 
-   void setBrightness(double brightness) {
+  void setBrightness(double brightness) {
     channel.invokeMethod(MethodCalls.setBrightness.name, {"value" : brightness });
   }
 

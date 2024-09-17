@@ -199,6 +199,14 @@ class DisneyApi extends MoviePlatformApi {
     await _refreshToken();
     return dataCacheManager.get(CacheDataKey.disney_video_access_token);
   }
+
+  @override
+  Future<Map<String, dynamic>> get metadata async {
+    final token = await dataCacheManager.get(CacheDataKey.disney_video_access_token);
+    final refreshToken = await dataCacheManager.get(CacheDataKey.disney_refresh_token);
+    final Map<String, dynamic> metadata = {"token" : token, "refreshToken" : refreshToken };
+    return metadata;
+  }
   
 }
 

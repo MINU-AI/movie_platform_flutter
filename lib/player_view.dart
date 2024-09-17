@@ -17,20 +17,20 @@ import 'native_constant.dart';
 abstract class PlayerView extends StatefulWidget {
   final PlatformViewType viewType = PlatformViewType.widevinePlayer;
   final DrmPlayer player;
+  final bool showFullScreen;
   final void Function(bool)? onFullscreen;
-  final String? title;
 
-  const PlayerView({super.key, this.title, required this.player, this.onFullscreen });
+  const PlayerView({super.key, required this.player, this.showFullScreen = true, this.onFullscreen });
 
   Widget get nativePlayerView;
 
-  factory PlayerView.create({required DrmPlayer player, String? title, void Function(bool)? onFullscreen }) {
+  factory PlayerView.create({required DrmPlayer player, void Function(bool)? onFullscreen }) {
     if(Platform.isAndroid) {
-      return _AndroidPlayerView(player: player, title: title, onFullscreen: onFullscreen, );
+      return _AndroidPlayerView(player: player, onFullscreen: onFullscreen, );
     }
 
     if(Platform.isIOS) {
-      return _IOSPlayerView(player: player, title: title, onFullscreen: onFullscreen,);
+      return _IOSPlayerView(player: player, onFullscreen: onFullscreen,);
     }
     throw "Unimplemented for this platform";
   }
@@ -83,7 +83,10 @@ class _PlayerViewState extends State<PlayerView> with PlayerListener, TickerProv
               alignment: Alignment.center,
               children: [
                 
-               widget.nativePlayerView,
+               Container(
+                color: const Color(0xFF000000),
+                child: widget.nativePlayerView,
+               ),
 
                 Visibility(visible: _showPlayerLoading, child: const CupertinoActivityIndicator(color: Color(0xFFFFFFFF), radius: 14,)),
 
@@ -329,12 +332,12 @@ extension on _PlayerViewState {
                   child: Container(color: Colors.black.withOpacity(0.4),),
                 ),
 
-                widget.title != null ? 
+                widget.player.payload.info?.title != null ? 
                   Positioned(
                     top: 12,
                     left: 12,
                     right: 12,
-                    child: ConstrainedBox(constraints: BoxConstraints(maxHeight: seekBarWidth - 32), child: TextView(text: widget.title!, maxLines: 1, fontSize: 12,)),
+                    child: ConstrainedBox(constraints: BoxConstraints(maxHeight: seekBarWidth - 32), child: TextView(text: widget.player.payload.info!.title, maxLines: 1, fontSize: 12,)),
                   ) : const SizedBox(),
 
                 Column(
@@ -406,15 +409,13 @@ extension on _PlayerViewState {
                       )
                     ),
                     
-                    SplashButton(      
+                   widget.showFullScreen ? SplashButton(      
                       splashColor: _splashColor,
                       borderRadius: BorderRadius.circular(32),                                          
                       onPressed: onFullscreenTapped,                      
                       child: const Padding(padding: EdgeInsets.all(8), child: Image(image: AssetImage(Assets.icFullscreen), width: 24, height: 24,),)
                       
-                    ),
-
-                    const SizedBox(height: 0,)
+                    ) : const SizedBox(),                    
 
                   ],
                 ),
@@ -600,7 +601,7 @@ class _VerticalSeekBarState extends State<_VerticalSeekBar> {
 
 class _AndroidPlayerView extends PlayerView {
   
-  const _AndroidPlayerView({super.title, required super.player, super.onFullscreen });
+  const _AndroidPlayerView({required super.player, super.onFullscreen });
   
   @override
   Widget get nativePlayerView {
@@ -615,7 +616,7 @@ class _AndroidPlayerView extends PlayerView {
 }
 
 class _IOSPlayerView extends PlayerView {
-  const _IOSPlayerView({ required super.player, super.title, super.onFullscreen, });
+  const _IOSPlayerView({ required super.player, super.onFullscreen, });
   
   @override
   Widget get nativePlayerView =>

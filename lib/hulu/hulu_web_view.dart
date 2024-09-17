@@ -47,12 +47,9 @@ class _HuluState extends PlatformState<HuluWebView> {
           final movieInfo = await platformApi.getMovieInfo(movieId);
           logger.i("Got movie info: $movieInfo");
           final moviePlayback = await platformApi.getPlaybackUrl(movieId);
-          logger.i("Got movie playback: $moviePlayback");
-          final token = await dataCacheManager.get(CacheDataKey.hulu_access_token);
-          final metadata = {
-            "token" : token,
-          };
-          final payload = MoviePayload(playback: moviePlayback, info: movieInfo, metadata: metadata);
+          logger.i("Got movie playback: $moviePlayback");      
+          final payload = MoviePayload(playback: moviePlayback, info: movieInfo, metadata: await platformApi.metadata);
+          
           popScreen(payload);          
         } catch(e) {
           logger.e("onUrlChange: $e");          

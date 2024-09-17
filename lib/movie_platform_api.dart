@@ -16,7 +16,7 @@ abstract class MoviePlatformApi with NetworkService {
 
   Future<dynamic> refreshToken();
 
-  Map<String, dynamic> get metadata => {};
+  Future<Map<String, dynamic>> get metadata => Future.value({});
 
   MoviePlatformApi();
 
