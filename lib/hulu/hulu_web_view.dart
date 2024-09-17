@@ -36,10 +36,10 @@ class _HuluState extends PlatformState<HuluWebView> {
           toggleLoading(false);
           return;
         }
-        const jsCode = """
-                        let element = document.querySelector(".CloseButton");
-                        element.click();
-                       """;
+        // const jsCode = """
+        //                 let element = document.querySelector(".CloseButton");
+        //                 element.click();
+        //                """;
         // runJavascript(jsCode);
         await dataCacheManager.cache(CacheDataKey.hulu_access_token, token);
         await dataCacheManager.cache(CacheDataKey.hulu_device_token, deviceToken);
