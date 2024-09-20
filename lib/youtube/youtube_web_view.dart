@@ -6,7 +6,7 @@ import 'package:player/movie_platform_api.dart';
 import 'package:player/movie_web_view.dart';
 
 class YoutubeWebView extends MovieWebView {
-  const YoutubeWebView({super.key, required super.platform });
+  const YoutubeWebView({super.key, required super.platform, super.doLoggingIn });
   
   @override
   PlatformState<MovieWebView> get state => _YoutubeState();
@@ -21,21 +21,13 @@ class _YoutubeState extends PlatformState<YoutubeWebView> {
   @override
   String? get userAgent => "Mozilla/5.0 (Linux; Android 8.0.0; SM-G955U Build/R16NW) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Mobile Safari/537.36";
 
-  @override
-  bool get loadUrlAtStartUp => false;
-
+  
   @override
   Map<String, String> get headers => {
       "Cookie" : "GPS=1; YSC=HSS9zIANMbg; VISITOR_PRIVACY_METADATA=CgJWThIEGgAgTw%3D%3D; VISITOR_INFO1_LIVE=VdXIBwppj8o; VISITOR_PRIVACY_METADATA=CgJWThIEGgAgTw%3D%3D; PREF=f6=40000000&f4=4000000&f7=100;",
       "Priority" : "u=0, i",
       "Accept" : "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
     };
-
-  @override
-  void initState() {
-    super.initState();    
-    loadWebView();
-  }
 
   @override
   Future<void> onUrlChange(String url) async {        
@@ -65,10 +57,4 @@ class _YoutubeState extends PlatformState<YoutubeWebView> {
   Future<void> onPageFinished(String url)  async {
   }
   
-}
-
-extension on _YoutubeState {
-  void loadWebView() async {
-    loadUrl(url);
-  }
 }

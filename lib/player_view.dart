@@ -1,3 +1,5 @@
+// ignore_for_file: invalid_use_of_protected_member
+
 import 'dart:async';
 import 'dart:io';
 
@@ -19,19 +21,49 @@ abstract class PlayerView extends StatefulWidget {
   final DrmPlayer player;
   final bool showFullScreen;
   final bool showControl;
+  final bool playWhenReady;
+  final void Function(int)? onForward;
+  final void Function(bool)? onTogglePlaying;
   final void Function(bool)? onFullscreen;
+  final void Function(int)? onPositionChanged;
+  final void Function(Duration)? onSeek;
 
-  const PlayerView({super.key, required this.player, this.showFullScreen = true, this.showControl = true, this.onFullscreen });
+  const PlayerView({super.key, required this.player, 
+                    this.showFullScreen = true, 
+                    this.showControl = true, 
+                    this.playWhenReady = true, 
+                    this.onFullscreen, this.onForward, 
+                    this.onTogglePlaying, 
+                    this.onPositionChanged, 
+                    this.onSeek });
 
   Widget get nativePlayerView;
 
-  factory PlayerView.create({required DrmPlayer player, bool showFullscreen = true, bool showControl = true, void Function(bool)? onFullscreen }) {
+  factory PlayerView.create({required DrmPlayer player, 
+          bool showFullscreen = true, 
+          bool showControl = true, 
+          bool playWhenReady = true,
+          void Function(bool)? onFullscreen,
+          void Function(int)? onForward, 
+          void Function(bool)? onTogglePlaying,
+          void Function(int)? onPositionChanged, 
+          void Function(Duration)? onSeek }) 
+  {
     if(Platform.isAndroid) {
-      return _AndroidPlayerView(player: player, showFullScreen: showFullscreen, showControl: showControl, onFullscreen: onFullscreen, );
+      return _AndroidPlayerView(player: player, showFullScreen: showFullscreen, 
+                                showControl: showControl, playWhenReady: playWhenReady, 
+                                onFullscreen: onFullscreen, onForward: onForward, 
+                                onTogglePlaying: onTogglePlaying, onPositionChanged: onPositionChanged, 
+                                onSeek: onSeek,
+                              );
     }
 
     if(Platform.isIOS) {
-      return _IOSPlayerView(player: player, showFullScreen: showFullscreen, showControl: showControl, onFullscreen: onFullscreen, );
+      return _IOSPlayerView(player: player, showFullScreen: showFullscreen, 
+                            showControl: showControl, playWhenReady: playWhenReady, 
+                            onFullscreen: onFullscreen, onForward: onForward, 
+                            onTogglePlaying: onTogglePlaying, onPositionChanged: onPositionChanged, 
+                            onSeek: onSeek, );
     }
     throw "Unimplemented for this platform";
   }
@@ -41,10 +73,11 @@ abstract class PlayerView extends StatefulWidget {
 
 }
 
-class _PlayerViewState extends State<PlayerView> with PlayerListener, TickerProviderStateMixin {
+class _PlayerViewState extends State<PlayerView> with PlayerListener, TickerProviderStateMixin, WidgetsBindingObserver {
   var _showPlayerLoading = true;
   var _progressWidth = 0.0;
   var _progressBufferWidth = 0.0;
+  int? _bufferedPercentage;
   bool? _isPlaying;
   Timer? _updatePlayerTimer;
   Timer? _hideControllTimer;
@@ -53,7 +86,6 @@ class _PlayerViewState extends State<PlayerView> with PlayerListener, TickerProv
   Animation<double>? _animation;
 
   final _animationDuration = 500;
-  double? _screenWidth;
   final _splashColor = const Color(0xFF353641).withOpacity(0.6);
   int? _duration;
   int? _currentPosition;
@@ -61,12 +93,10 @@ class _PlayerViewState extends State<PlayerView> with PlayerListener, TickerProv
   var _showControl = false;
   var _isLanscape = false;
   var _isChangingVolume = false;
-  var _currentBrightness = 0.0;
+  double? _currentBrightness;
+  bool? _playToEnd;
 
-  double get seekBarWidth {
-    _screenWidth ??=  MediaQuery.of(context).size.width;
-    return _screenWidth!;
-  }
+  double get seekBarWidth => MediaQuery.of(context).size.width;
 
   double get progressMaxWidth => seekBarWidth - 12;
 
@@ -75,6 +105,7 @@ class _PlayerViewState extends State<PlayerView> with PlayerListener, TickerProv
     widget.player.addListener(this);    
     initVolumeController();    
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
   }
 
   @override
@@ -113,10 +144,25 @@ class _PlayerViewState extends State<PlayerView> with PlayerListener, TickerProv
     VolumeController().removeListener();
     
     SystemChrome.setPreferredOrientations([
-      DeviceOrientation.landscapeLeft
+      DeviceOrientation.portraitUp
     ]);
 
     super.dispose();
+  }
+
+  @override
+  void didChangeMetrics() {    
+    super.didChangeMetrics();
+    if(!mounted) {
+      return;
+    }
+    if(_currentPosition == null || _duration == null || _bufferedPercentage == null) {
+      return;
+    }        
+    setState(() {
+      _progressWidth = (_currentPosition! / _duration!) * progressMaxWidth;
+      _progressBufferWidth = (_bufferedPercentage! / 100.0) * seekBarWidth;  
+    });    
   }
 
   void showAlertDialog({ String? title, String? content, void Function()? onOkPressed }) {
@@ -145,6 +191,11 @@ class _PlayerViewState extends State<PlayerView> with PlayerListener, TickerProv
     // logger.i("Got onPlaybackStateChanged: $state");
     if(state == PlayerState.end) {
       releaseUpdatePlayerTimer();
+      _playToEnd = true;
+      setState(() {
+        _currentPosition = _duration;  
+        _progressWidth = progressMaxWidth;
+      });      
     }    
     
     setState(() {
@@ -162,10 +213,15 @@ class _PlayerViewState extends State<PlayerView> with PlayerListener, TickerProv
   }
   
   @override
-  void onPlayingChange(bool isPlaying) {
+  void onPlayingChange(bool isPlaying) {    
     _isPlaying = isPlaying;
-    initBrightness();
-    if(isPlaying && _isSeeking != true){
+    if(!widget.playWhenReady) {
+      _showPlayerLoading = false;
+    }
+    if(_currentBrightness == null) {
+      initBrightness();
+    }
+    if(isPlaying && _isSeeking != true){            
       createUpdatePlayerTimer(); 
     }    
   }
@@ -173,17 +229,16 @@ class _PlayerViewState extends State<PlayerView> with PlayerListener, TickerProv
 }
 
 extension on _PlayerViewState {
-  void createUpdatePlayerTimer() {
-    _updatePlayerTimer?.cancel();
-    _updatePlayerTimer = Timer.periodic(const Duration(milliseconds: 1000), (timer) async {
-      final currentPosition = await widget.player.currentPosition;      
+  Future<void> updateVideoProgerss() async {
+    final currentPosition = await widget.player.currentPosition;      
       final duration = await widget.player.duration;
-      final bufferedPercentage = await widget.player.bufferedPercentage;
-      if(currentPosition == null || duration == null || bufferedPercentage == null) {
+      _bufferedPercentage = await widget.player.bufferedPercentage;
+      if(currentPosition == null || duration == null || _bufferedPercentage == null) {
         return;
       }
       // logger.i("Got currentPosition: $currentPosition, $bufferedPercentage");
-      final newBufferWidth = (bufferedPercentage / 100.0) * seekBarWidth;
+      widget.onPositionChanged?.call(currentPosition);
+      final newBufferWidth = (_bufferedPercentage! / 100.0) * seekBarWidth;
       if(newBufferWidth != _progressBufferWidth) {
           final animationDuration = ((_progressBufferWidth - newBufferWidth).abs() / seekBarWidth) * _animationDuration;
           final tween = newBufferWidth > _progressBufferWidth ? Tween(begin: _progressBufferWidth, end: newBufferWidth) : Tween(begin: _progressBufferWidth, end: newBufferWidth);
@@ -203,7 +258,12 @@ extension on _PlayerViewState {
         _duration = duration;
         _progressWidth = (currentPosition / duration) * progressMaxWidth;  
       });
-      
+  }
+  void createUpdatePlayerTimer() {
+    _updatePlayerTimer?.cancel();
+    updateVideoProgerss();
+    _updatePlayerTimer = Timer.periodic(const Duration(milliseconds: 1000), (timer) async {
+      await updateVideoProgerss();      
     });
   }
 
@@ -216,28 +276,32 @@ extension on _PlayerViewState {
     var currentPosition = await widget.player.currentPosition;
     if(currentPosition == null) {
       return;
-    }
-    
-    currentPosition += step.inMilliseconds;
+    }    
+    currentPosition = currentPosition + step.inMilliseconds;
     logger.i("Got seek position: $currentPosition");
-    widget.player.seek(Duration(milliseconds: currentPosition));
-
+    widget.player.seek(Duration(milliseconds: currentPosition));    
+    widget.onForward?.call(step.inSeconds);
   }
 
-  void togglePlay() {
+  void togglePlay() async {
     if(_isPlaying == null) {
       return;
     }
     releaseControlTimer();
+    if(await widget.player.isFinished || _playToEnd == true) {
+      widget.player.seek(Duration.zero);
+      _playToEnd = false;
+    }
     if(_isPlaying!) {
       widget.player.pause();
     } else {
       widget.player.play();
     }
+    widget.onTogglePlaying?.call(!_isPlaying!);
     createControlTimer();
   }
 
-  void updateProgress(Offset offset) async {
+  void updateSeekbarProgress(Offset offset) async {
     _progressWidth += offset.dx;
     
     setState(() {
@@ -249,18 +313,20 @@ extension on _PlayerViewState {
     });    
   }
 
-  Future<void> updatePlayerPosition() async {
+  Future<Duration?> updatePlayerPosition() async {
     final duration = await widget.player.duration;
     if(duration == null) {
-      return;
+      return null;
     }
     final newPosition = (_progressWidth / progressMaxWidth) * duration;
     logger.i("Got new position: $newPosition, ${newPosition.round()}");
-    widget.player.seek(Duration(microseconds: (newPosition * 1000).toInt()));
+    final seekDuration = Duration(microseconds: (newPosition * 1000).toInt());
+    widget.player.seek(seekDuration);
+    return seekDuration;
   }
 
   void onControlsTapped() {
-    logger.i("Got tapp on player");
+    // logger.i("Got tapp on player");
 
     setState(() {
       _showControl = !_showControl;
@@ -318,14 +384,17 @@ extension on _PlayerViewState {
 
   void initBrightness() async {
     final brightness = await widget.player.brightness ?? 0;  
+    logger.i("Got brightness: $brightness");
     setState(() {
-      _currentBrightness = brightness;
+      _currentBrightness = Platform.isAndroid ? brightness / 255 : brightness;
     },);    
   }
 }
 
 extension on _PlayerViewState {
   Widget get playerControlsView {
+    final playerIsReady = _isPlaying != null;
+
     return Stack(
               alignment: Alignment.center,
               children: [
@@ -338,25 +407,19 @@ extension on _PlayerViewState {
                     top: 12,
                     left: 12,
                     right: 12,
-                    child: ConstrainedBox(constraints: BoxConstraints(maxHeight: seekBarWidth - 32), child: TextView(text: widget.player.payload.info!.title, maxLines: 1, fontSize: 12,)),
+                    child: ConstrainedBox(constraints: BoxConstraints(maxHeight: seekBarWidth - 32), child: TextView(text: widget.player.payload.info!.title, maxLines: 1, fontSize: 14,)),
                   ) : const SizedBox(),
 
-                Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    const Spacer(),
+                  _currentPosition != null && _duration != null ? 
+                    Positioned(
+                      bottom: widget.showFullScreen ? 50 : 30,
+                      left: 4,
+                      child: TextView(text: "${_currentPosition!.toTimeDisplay()} / ${_duration!.toTimeDisplay()}", fontSize: 10,)
+                    ): const SizedBox(),
 
-                    _currentPosition != null && _duration != null ? Row(
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.only(left: 12, bottom: 2),
-                          child: TextView(text: "${_currentPosition!.toTimeDisplay()} / ${_duration!.toTimeDisplay()}", fontSize: 10,)
-                        )
-                      ],
-                    ) : const SizedBox(),
-                    
-                    GestureDetector(
+                playerIsReady ? Positioned(
+                  bottom: widget.showFullScreen ? 28 : 8,
+                  child: GestureDetector(
                       onHorizontalDragStart: (details) {
                         _isSeeking = true;
                         releaseControlTimer();
@@ -364,22 +427,25 @@ extension on _PlayerViewState {
                       },
                       onHorizontalDragUpdate: (details) {
                         logger.i("onHorizontalDragUpdate: ${details.delta.dx}"); 
-                        updateProgress(details.delta);
+                        updateSeekbarProgress(details.delta);
                       },
                       onHorizontalDragEnd: (details) async {
                         logger.i("onHorizontalDragEnd: $details");
-                        await updatePlayerPosition();
+                        final duration = await updatePlayerPosition();
                         _isSeeking = false;   
-                        createControlTimer();                     
+                        createControlTimer();
+                        if(duration != null) {
+                          widget.onSeek?.call(duration);
+                        }
                       },
                       child: Container(
                         color: Colors.transparent,
-                        padding: const EdgeInsets.symmetric(vertical: 0),
+                        padding: const EdgeInsets.symmetric(vertical: 8),
                         child: Stack(
                                 alignment: Alignment.centerLeft,
                                 children: [
                                   Container(
-                                      width: double.infinity,
+                                      width: seekBarWidth,
                                       decoration: BoxDecoration(color: const Color(0xFFD9D9D9).withOpacity(0.2)),
                                       height: 4,                                      
                                   ),
@@ -409,25 +475,26 @@ extension on _PlayerViewState {
                               ),
                       )
                     ),
-                    
-                   widget.showFullScreen ? SplashButton(      
+                ) : const SizedBox(),
+
+                widget.showFullScreen ? Positioned(
+                  right: 4,
+                  bottom: 0,
+                  child: SplashButton(      
                       splashColor: _splashColor,
                       borderRadius: BorderRadius.circular(32),                                          
                       onPressed: onFullscreenTapped,                      
                       child: const Padding(padding: EdgeInsets.all(8), child: Image(image: AssetImage(Assets.icFullscreen), width: 24, height: 24,),)
                       
-                    ) : const SizedBox(height: 12,),                    
+                    )) : const SizedBox(height: 0,),     
 
-                  ],
-                ),
-
-                Row(
+                playerIsReady ? Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
 
                       const SizedBox(width: 24,),
 
-                      _VerticalSeekBar(topIcon: Assets.icPlayerBrightness, initialValue: _currentBrightness, onStart: releaseControlTimer, onEnd: (value) => createControlTimer, onUpdate: (value) {
+                      _VerticalSeekBar(topIcon: Assets.icPlayerBrightness, initialValue: _currentBrightness ?? 0, onStart: releaseControlTimer, onEnd: (value) => createControlTimer, onUpdate: (value) {
                         _currentBrightness = value;
                         widget.player.setBrightness(value);
                       }),
@@ -455,7 +522,7 @@ extension on _PlayerViewState {
                         child: SizedBox(
                           width: 48,
                           height: 48,
-                          child: _isPlaying != null ? Image(image: AssetImage(_isPlaying! ?  Assets.icPause : Assets.icPlayerPlay), width: 48, height: 48,) : null,
+                          child: playerIsReady ? Image(image: AssetImage(_isPlaying! ?  Assets.icPause : Assets.icPlayerPlay), width: 48, height: 48,) : null,
                         )                        
                       ),
 
@@ -489,7 +556,7 @@ extension on _PlayerViewState {
 
                       const SizedBox(width: 24,),
                   ],
-                )
+                ) : const SizedBox()
                   
               ],
             );
@@ -602,14 +669,17 @@ class _VerticalSeekBarState extends State<_VerticalSeekBar> {
 
 class _AndroidPlayerView extends PlayerView {
   
-  const _AndroidPlayerView({required super.player, super.showFullScreen, super.showControl, super.onFullscreen });
+  const _AndroidPlayerView({required super.player, super.showFullScreen, super.showControl, super.playWhenReady, super.onFullscreen, super.onForward, super.onTogglePlaying, super.onPositionChanged, super.onSeek });
   
   @override
   Widget get nativePlayerView {
+    var params = player.paramsForPlayerView;
+    params["playWhenReady"] = playWhenReady;
+
     return AndroidView(
       viewType: viewType.name,
       layoutDirection: TextDirection.ltr,
-      creationParams: player.paramsForPlayerView,
+      creationParams: params,
       creationParamsCodec: const StandardMessageCodec(),
     );
   }
@@ -617,15 +687,19 @@ class _AndroidPlayerView extends PlayerView {
 }
 
 class _IOSPlayerView extends PlayerView {
-  const _IOSPlayerView({ required super.player, super.showFullScreen, super.showControl, super.onFullscreen, });
+  const _IOSPlayerView({ required super.player, super.showFullScreen, super.showControl, super.playWhenReady, super.onFullscreen, super.onForward, super.onTogglePlaying, super.onPositionChanged, super.onSeek });
   
   @override
-  Widget get nativePlayerView =>
-    UiKitView(
+  Widget get nativePlayerView {
+    var params = player.paramsForPlayerView;
+    params["playWhenReady"] = playWhenReady;
+
+    return UiKitView(
       viewType: viewType.name,
       layoutDirection: TextDirection.ltr,
-      creationParams: player.paramsForPlayerView,
+      creationParams: params,
       creationParamsCodec: const StandardMessageCodec(),
     );
+  }
   
 }

@@ -5,7 +5,7 @@ import 'package:player/movie_web_view.dart';
 import 'package:webview_cookie_manager/webview_cookie_manager.dart';
 
 class HuluWebView extends MovieWebView {
-  const HuluWebView({super.key, required super.platform});
+  const HuluWebView({super.key, required super.platform, super.doLoggingIn });
 
   @override
   PlatformState<MovieWebView> get state => _HuluState();
@@ -21,6 +21,14 @@ class _HuluState extends PlatformState<HuluWebView> {
   @override
   void onUrlChange(String url) async {
     if(_isGotMovie) {
+      return;
+    }
+    
+    if(url == "https://www.hulu.com/hub/home") {
+       await getWebToken(url); 
+      if(widget.doLoggingIn) {
+        popScreen(true);
+      }
       return;
     }
 
@@ -41,15 +49,14 @@ class _HuluState extends PlatformState<HuluWebView> {
         //                 element.click();
         //                """;
         // runJavascript(jsCode);
-        await dataCacheManager.cache(CacheDataKey.hulu_access_token, token);
-        await dataCacheManager.cache(CacheDataKey.hulu_device_token, deviceToken);
+        
         try {
           final movieInfo = await platformApi.getMovieInfo(movieId);
           logger.i("Got movie info: $movieInfo");
           final moviePlayback = await platformApi.getPlaybackUrl(movieId);
           logger.i("Got movie playback: $moviePlayback");      
           final payload = MoviePayload(playback: moviePlayback, info: movieInfo, metadata: await platformApi.metadata);
-          
+
           popScreen(payload);          
         } catch(e) {
           logger.e("onUrlChange: $e");          
@@ -77,6 +84,9 @@ extension on _HuluState {
         logger.i("Got device token: $deviceToken");
       }
     }
+
+    await dataCacheManager.cache(CacheDataKey.hulu_access_token, token);
+    await dataCacheManager.cache(CacheDataKey.hulu_device_token, deviceToken);
 
     return (token, deviceToken);
   }

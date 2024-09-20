@@ -60,6 +60,7 @@ public class NativePlayerView: NSObject, FlutterPlatformView {
     deinit {
         player?.removeObserver(self, forKeyPath: "timeControlStatus")
         player?.removeObserver(self, forKeyPath: "status")
+        player?.replaceCurrentItem(with: nil)
         activateAudioSession(activate: false)
         if let systemBrightness = systemBrightness {
             UIScreen.main.brightness = systemBrightness
@@ -79,7 +80,7 @@ extension NativePlayerView {
         let asset = AVURLAsset(url: URL(string: playbackUrl)!)
         if moviePlatform != .youtube {
             keyLoader = try FairplayKeyLoader.create(fromMoviePlatform: moviePlatform, certificateURL: certificateUrl!, licenseUrl: licenseKeyUrl, channel: channel, metadata: metadata)
-            asset.resourceLoader.setDelegate(keyLoader, queue: DispatchQueue(label: "KeyLoaderQueue"))
+            asset.resourceLoader.setDelegate(keyLoader, queue: DispatchQueue.global())
         }
         return AVPlayerItem(asset: asset)
     }
@@ -90,7 +91,12 @@ extension NativePlayerView {
         player?.addObserver(self, forKeyPath: "timeControlStatus", options: [.new], context: nil)
         player?.addObserver(self, forKeyPath: "status", options: [.new], context: nil)
         activateAudioSession(activate: true)
-        player?.play()
+        let playWhenReady = creationParams["playWhenReady"] as! Bool
+        if playWhenReady {
+            player?.play()
+        } else {
+            player?.pause()
+        }
     }
     
     override public func observeValue(forKeyPath keyPath: String?, of object: Any?, change: [NSKeyValueChangeKey : Any]?, context: UnsafeMutableRawPointer?) {
@@ -170,7 +176,7 @@ extension NativePlayerView {
             // Activate the audio session
             try audioSession.setActive(activate)
         } catch {
-            print("Failed to activate audio session: \(error.localizedDescription)")
+            print("Got Failed to activate audio session: \(error.localizedDescription)")
         }
     }
 }

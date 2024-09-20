@@ -113,17 +113,30 @@ class MoviePayload {
   MoviePayload({required this.playback, required this.info, required this.metadata});
 }
 
-Future<bool> get isDiseyLoggedIn async {
+Future<bool> get _isDiseyLoggedIn async {
   final token = await dataCacheManager.get(CacheDataKey.disney_video_access_token);
   return token != null;
 }
 
-Future<bool> get isHuluLoggedIn async {
+Future<bool> get _isHuluLoggedIn async {
   final token = await dataCacheManager.get(CacheDataKey.hulu_access_token);
   return token != null;
 }
 
-Future<bool> get isPrimeLoggedIn async {
-  final isLoggedIn = await dataCacheManager.get(CacheDataKey.prime_logged_in);
-  return isLoggedIn == true;
+Future<bool> get _isPrimeLoggedIn async {
+  final isLoggedIn = (await dataCacheManager.get(CacheDataKey.prime_logged_in)) ?? false;
+  return isLoggedIn;
+}
+
+Future<bool> isMoviePlatformLoggedIn(MoviePlatform platform) async {
+  switch(platform) {
+    case MoviePlatform.youtube:
+      return true;
+    case MoviePlatform.disney:
+      return _isDiseyLoggedIn;
+    case MoviePlatform.hulu:
+      return _isHuluLoggedIn;
+    case MoviePlatform.prime:
+      return _isPrimeLoggedIn;
+  }
 }

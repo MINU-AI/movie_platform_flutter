@@ -2,6 +2,7 @@ package com.minu.player
 
 import android.os.Handler
 import android.os.Looper
+import android.provider.ContactsContract.Data
 import android.util.Log
 import androidx.media3.common.util.Assertions
 import androidx.media3.common.util.UnstableApi
@@ -17,6 +18,11 @@ import androidx.media3.exoplayer.drm.MediaDrmCallbackException
 import com.google.common.io.ByteStreams
 import io.flutter.plugin.common.BinaryMessenger
 import io.flutter.plugin.common.MethodChannel
+import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Semaphore
+import okhttp3.internal.wait
+import java.util.Date
 import java.util.UUID
 
 
@@ -26,18 +32,19 @@ class DisneyDrmCallback(
     private val licenseUrl: String,
     private val dataSourceFactory: HttpDataSource.Factory,
     private  var token: String,
-    ) : MoviePlatformDrmCallback {
+    ) :
+    MoviePlatformDrmCallback {
+
+    private var retryTimePoint: Long? = null
+    private val maxRetryTime = 2 * 60 * 1000
 
     override fun executeKeyRequest(uuid: UUID, request: ExoMediaDrm.KeyRequest): ByteArray {
         val requestProperties: MutableMap<String, String> = HashMap()
 
         // Add standard request properties for supported schemes.
         requestProperties["Content-Type"] = "application/octet-stream"
-        requestProperties["X-BAMSDK-Platform"] = "android-tv"
-        requestProperties["Accept"] = "application/json, application/vnd.media-service+json; version=2"
-        requestProperties["X-BAMSDK-Client-ID"] = "disney-svod-3d9324fc"
-        requestProperties["X-DSS-Edge-Accept"] = "vnd.dss.edge+json; version=2"
         requestProperties["Authorization"] = "Bearer $token"
+
         return executePost(dataSourceFactory, licenseUrl, request.data, requestProperties)
     }
 
@@ -76,8 +83,10 @@ class DisneyDrmCallback(
             if( e is InvalidResponseCodeException) {
                 when(e.responseCode) {
                     401 -> {
+                        val oldToken = token
                         token = ""
-                        Handler(Looper.getMainLooper()).post {
+                        val semaphore = Semaphore(1)
+                        MainScope().launch {
                             channel.invokeMethod(MethodCalls.refreshToken.name, MoviePlatform.disney.name, object: MethodChannel.Result {
                                 override fun success(result: Any?) {
                                     Log.i(TAG, "Call native method succeeded: $result")
@@ -94,6 +103,7 @@ class DisneyDrmCallback(
                                     errorDetails: Any?
                                 ) {
                                     Log.e(TAG, "Call native method with error: $errorCode, $errorMessage")
+                                    token = oldToken
                                 }
 
                                 override fun notImplemented() {
@@ -102,14 +112,37 @@ class DisneyDrmCallback(
 
                             })
                         }
+
                         while (token.isBlank()) {
                         }
+
                         return executePost(dataSourceFactory, url, httpBody, requestProperties)
                     }
 
-                    else -> return executePost(dataSourceFactory, url, httpBody, requestProperties)
+                    else -> {
+                        if (retryTimePoint == null) {
+                            retryTimePoint = Date().time
+                        }
+                        val currentTime = Date().time
+                        if(currentTime - retryTimePoint!! > maxRetryTime) {
+                            retryTimePoint = null
+                            throw MediaDrmCallbackException(
+                                originalDataSpec,
+                                Assertions.checkNotNull(dataSource.lastOpenedUri),
+                                dataSource.responseHeaders,
+                                dataSource.bytesRead,  /* cause= */
+                                e
+                            )
+                        }
+                        try {
+                            Thread.sleep(1000)
+                        } catch (_: InterruptedException) {
+                        }
+                        return executePost(dataSourceFactory, url, httpBody, requestProperties)
+                    }
                 }
             }
+            retryTimePoint = null
             throw MediaDrmCallbackException(
                 originalDataSpec,
                 Assertions.checkNotNull(dataSource.lastOpenedUri),

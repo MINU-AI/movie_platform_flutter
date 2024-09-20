@@ -9,7 +9,7 @@ import '../movie_platform_api.dart';
 import '../movie_web_view.dart';
 
 class DisneyWebView extends MovieWebView {
-  const DisneyWebView({super.key, required super.platform });
+  const DisneyWebView({super.key, required super.platform, super.doLoggingIn });
 
   @override
   PlatformState<MovieWebView> get state => _DisneyState();
@@ -43,6 +43,9 @@ class _DisneyState extends PlatformState<DisneyWebView> {
         await getApiToken();
         try {
           await platformApi.getToken(params: [profileId]);
+          if(widget.doLoggingIn) {
+            popScreen(true);
+          }
         } catch(e) {
           logger.e("switchProfile error: $e");
         }

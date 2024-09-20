@@ -2,13 +2,9 @@ package com.minu.player
 
 import android.app.Activity
 import android.content.Context
-import android.content.Context.WINDOW_SERVICE
 import android.content.ContextWrapper
-import android.content.MutableContextWrapper
-import android.net.Uri
 import android.provider.Settings
 import android.view.View
-import android.view.WindowManager
 import androidx.annotation.OptIn
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
@@ -35,7 +31,7 @@ import io.flutter.plugin.platform.PlatformView
 
 class NativePlayerView(
     val context: Context,
-    val binaryMessenger: BinaryMessenger,
+    binaryMessenger: BinaryMessenger,
     private val creationParams: Map<*, *>
 ) :
     PlatformView {
@@ -208,6 +204,8 @@ fun NativePlayerView.createPlayer(creationParams: Map<*, *>): Player {
         .setSeekBackIncrementMs(10000)
         .build()
 
+    val playWhenReady = creationParams["playWhenReady"] as Boolean
+
     player.addListener(object: Player.Listener {
         override fun onPlaybackStateChanged(playbackState: Int) {
             super.onPlaybackStateChanged(playbackState)
@@ -232,7 +230,7 @@ fun NativePlayerView.createPlayer(creationParams: Map<*, *>): Player {
     })
 
 
-    player.playWhenReady = true
+    player.playWhenReady = playWhenReady
     player.setMediaSource(createMediaSource(creationParams), true)
     player.prepare()
 
@@ -263,7 +261,10 @@ fun NativePlayerView.createMediaSource(creationParams: Map<*, *>): MediaSource {
         MoviePlatform.disney -> {
             val token = metadata["token"] as String
             val disneyMediaDrmCallback = DisneyDrmCallback(methodChannel, licenseKeyUrl!!, dataSourceFactory, token)
-            val drmSessionManager = DefaultDrmSessionManager.Builder().build(disneyMediaDrmCallback)
+            val drmSessionManager = DefaultDrmSessionManager
+                                                                .Builder()
+                                                                .setMultiSession(true)
+                                                                .build(disneyMediaDrmCallback)
 
             val hlsMediaSource =
                 HlsMediaSource.Factory(manifestDataSourceFactory)

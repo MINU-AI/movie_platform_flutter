@@ -11,7 +11,7 @@ import 'package:collection/collection.dart';
 import '../extension.dart';
 
 class PrimeWebView extends MovieWebView {
-  const PrimeWebView({super.key, required super.platform });
+  const PrimeWebView({super.key, required super.platform, super.doLoggingIn });
 
   @override
   PlatformState<MovieWebView> get state => _PrimeState();
@@ -58,9 +58,17 @@ class _PrimeState extends PlatformState<PrimeWebView> {
         logger.i("Got video id: $_videoId");
       }
     }
+  }
 
+  @override
+  void onPageFinished(String url) async {
+    super.onPageFinished(url);
     if(url.startsWith("https://www.amazon.com/Amazon-Video")) {
+      await _getCookies();      
       dataCacheManager.cache(CacheDataKey.prime_logged_in, true);
+      if(widget.doLoggingIn) {
+        popScreen(true);
+      }
     }
   }
 

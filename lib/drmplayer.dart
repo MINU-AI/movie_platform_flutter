@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:flutter/services.dart';
 
-import 'logger.dart';
 import 'movie_platform_api.dart';
 import 'native_constant.dart';
 
@@ -43,8 +42,8 @@ class DrmPlayer {
     channel.invokeMethod(MethodCalls.controlPlayer.name, { "action" : PlayerControlAction.pause.name });    
   }
 
-  void seek(Duration duration) {
-    channel.invokeMethod(MethodCalls.controlPlayer.name, { "action" : PlayerControlAction.seek.name, "value" : duration.inMilliseconds });
+  Future<void> seek(Duration duration) {
+    return channel.invokeMethod(MethodCalls.controlPlayer.name, { "action" : PlayerControlAction.seek.name, "value" : duration.inMilliseconds });
   }
 
   void stop() {
@@ -57,6 +56,10 @@ class DrmPlayer {
 
   void setVolume(double volume) {
     channel.invokeMethod(MethodCalls.controlPlayer.name, {"action" : PlayerControlAction.changeVolume.name, "value" : volume });
+  }
+
+  Future<bool> get isFinished async {
+    return await currentPosition == await duration;
   }
 
   Future<double?> get brightness => channel.invokeMethod(MethodCalls.getBrightness.name);

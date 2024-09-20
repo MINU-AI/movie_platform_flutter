@@ -7,6 +7,7 @@ import '../movie_platform_api.dart';
 
 class DisneyApi extends MoviePlatformApi {
   dynamic config;
+  var _retryGetPlayback = 0;
 
   @override
   Future<MovieInfo> getMovieInfo(String movieId) async {
@@ -38,49 +39,58 @@ class DisneyApi extends MoviePlatformApi {
   }
 
   @override
-  Future<MoviePlayback> getPlaybackUrl(String movieId) async {    
-    final resourceId = await _getResourceId(movieId);
-    await _refreshToken();
-    final playbackEncryptionDefault = config["services"]["media"]["extras"]["playbackEncryptionDefault"] as String;
-    const mediaQualityDefault = "regular"; // config["services"]["media"]["extras"]["mediaQualityDefault"] as String;
-    final url = "$_getPlaybackUrl/$playbackEncryptionDefault-$mediaQualityDefault";
-    final token = await dataCacheManager.get(CacheDataKey.disney_video_access_token) as String;
-    final headers = _createHeader({
-                                    "Content-Type": "application/json",
-                                    "accept" : "application/vnd.media-service+json; version=6",
-                                    "authorization" : token,
-                                    "x-dss-feature-filtering" : "true",
-                    });
-    final body = {
-            "playbackId": resourceId,
-            "playback": {
-                "attributes": {
-                    "codecs": {
-                        'supportsMultiCodecMaster': false,
-                    },
-                    "protocol": "HTTPS",                   
-                    "frameRates": [60],
-                    "assetInsertionStrategy": "SGAI",
-                    "playbackInitializationContext": "ONLINE"
-                },
-            }
-        };
-    final response = await post(url, body: body, headers: headers);
-    String? licenseKeyURL;
-    String? licenseCertificateURL;
-    if(Platform.isAndroid) {
-      licenseKeyURL = config["services"]["drm"]["client"]["endpoints"]["widevineLicense"]["href"] as String?;
-      licenseCertificateURL = config["services"]["drm"]["client"]["endpoints"]["widevineCertificate"]["href"] as String?;
+  Future<MoviePlayback> getPlaybackUrl(String movieId) async {  
+    if(_retryGetPlayback > 4) {
+      throw "Got getPlaybackUrl error: exceeded retry times";
     }
-    
-    licenseKeyURL = config["services"]["drm"]["client"]["endpoints"]["fairPlayLicense"]["href"] as String?;
-    licenseCertificateURL = config["services"]["drm"]["client"]["endpoints"]["fairPlayCertificate"]["href"] as String?;
-      
-    final sources = response["stream"]["sources"] as List<dynamic>;
-    final playbackUrl = sources.first["complete"]["url"] as String;
-    final mediaPlayback = MoviePlayback(playbackUrl: playbackUrl, licenseKeyUrl: licenseKeyURL, licenseCertificateUrl: licenseCertificateURL);
-    logger.i("Got movie playback: $mediaPlayback");
-    return mediaPlayback;
+
+    try {  
+      final resourceId = await _getResourceId(movieId);
+      final playbackEncryptionDefault = config["services"]["media"]["extras"]["playbackEncryptionDefault"] as String;
+      const mediaQualityDefault = "regular"; // config["services"]["media"]["extras"]["mediaQualityDefault"] as String;
+      final url = "$_getPlaybackUrl/$playbackEncryptionDefault-$mediaQualityDefault";
+      final token = await dataCacheManager.get(CacheDataKey.disney_video_access_token) as String;
+      final headers = _createHeader({
+                                      "Content-Type": "application/json",
+                                      "accept" : Platform.isAndroid ? "application/vnd.media-service+json; version=5" : "application/vnd.media-service+json; version=6",
+                                      "authorization" : token,
+                                      "x-dss-feature-filtering" : "true",
+                      });
+      final body = {
+              "playbackId": resourceId,
+              "playback": {
+                  "attributes": {
+                      "codecs": {
+                          'supportsMultiCodecMaster': false,
+                      },
+                      "protocol": "HTTPS",                   
+                      "frameRates": [60],
+                      "assetInsertionStrategy": "SGAI",
+                      "playbackInitializationContext": "ONLINE"
+                  },
+              }
+          };
+      final response = await post(url, body: body, headers: headers);
+      String? licenseKeyURL;
+      String? licenseCertificateURL;
+      if(Platform.isAndroid) {
+        licenseKeyURL = config["services"]["drm"]["client"]["endpoints"]["widevineLicense"]["href"] as String?;
+        licenseCertificateURL = config["services"]["drm"]["client"]["endpoints"]["widevineCertificate"]["href"] as String?;
+      } else if (Platform.isIOS) {
+        licenseKeyURL = config["services"]["drm"]["client"]["endpoints"]["fairPlayLicense"]["href"] as String?;
+        licenseCertificateURL = config["services"]["drm"]["client"]["endpoints"]["fairPlayCertificate"]["href"] as String?;    
+      }    
+        
+      final sources = response["stream"]["sources"] as List<dynamic>;
+      final playbackUrl = sources.first["complete"]["url"] as String;
+      final mediaPlayback = MoviePlayback(playbackUrl: playbackUrl, licenseKeyUrl: licenseKeyURL, licenseCertificateUrl: licenseCertificateURL);
+      logger.i("Got movie playback: $mediaPlayback");
+      return mediaPlayback;
+    } catch(e) {
+      await _refreshToken();
+      _retryGetPlayback++;
+      return getPlaybackUrl(movieId);
+    }
   }
 
   @override
@@ -122,7 +132,7 @@ class DisneyApi extends MoviePlatformApi {
   }
 
   Future<dynamic> _getResource(String contentId) async {
-    final apiAccessToken = await dataCacheManager.get(CacheDataKey.disney_api_access_token);
+    final apiAccessToken = await dataCacheManager.get(CacheDataKey.disney_video_access_token);
     final headers = {
       "authorization" : "Bearer $apiAccessToken"
     };
@@ -216,7 +226,7 @@ final _sdkPlatform = Platform.isAndroid ? "android-tv" : "apple/ios/iphone";
 
 const _apiKey = 'ZGlzbmV5JmFuZHJvaWQmMS4wLjA.bkeb0m230uUhv8qrAXuNu39tbE_mD5EEhM_NAcohjyA';
 final _configUrl = Platform.isAndroid ? 'https://bam-sdk-configs.bamgrid.com/bam-sdk/v5.0/$_clientId/android/v$_clientVersion/google/tv/prod.json' : "https://bam-sdk-configs.bamgrid.com/bam-sdk/v4.0/disney-svod-3d9324fc/apple/v11.1.4/ios/iphone/prod.json";
-const _resourceUrl = "https://disney.api.edge.bamgrid.com/explore/v1.4/upNext";
+const _resourceUrl = "https://disney.api.edge.bamgrid.com/explore/v1.6/upNext";
 const _getPlaybackUrl = "https://disney.playback.edge.bamgrid.com/v7/playback";
 
 final _headers = {

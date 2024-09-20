@@ -209,6 +209,10 @@ class HuluApi extends MoviePlatformApi {
 
     var response = await post(endpoint, headers: headers, body: payload);
     var playbackUrl = response["stream_url"];
+    if(playbackUrl == null) {
+      throw "Got getPlaybackUrl error: $response";
+    }
+
     final licenseKeyUrl = Platform.isAndroid ? response["wv_server"] : response["fp_server"];
     final certificateUrl = Platform.isAndroid ? null : response["fp_cert"];
 
@@ -268,6 +272,10 @@ class HuluApi extends MoviePlatformApi {
     };
 
     final response = await get(endpoint, headers: headers, params: params);
+    if(response["eab_id"] == null) {
+      throw "Got _getEabId error: $response";
+    }
+
     return response["eab_id"];
   }
 
@@ -284,6 +292,9 @@ class HuluApi extends MoviePlatformApi {
     };
 
     final response = await get(endpoint, headers: headers, params: params);
+    if(response["items"] is! List<dynamic>) {
+      throw "Got _getMovieItem error: $response";
+    }
     return (response["items"] as List<dynamic>).first;
   }
 

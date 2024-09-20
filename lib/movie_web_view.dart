@@ -25,22 +25,23 @@ final Set<Factory<OneSequenceGestureRecognizer>> gestureRecognizers = {
 
 abstract class MovieWebView extends MoviePickerView {
   final MoviePlatform platform;
+  final bool doLoggingIn;
 
-  const MovieWebView({super.key, required this.platform });
+  const MovieWebView({super.key, required this.platform, this.doLoggingIn = false });
 
-  factory MovieWebView.create({ required MoviePlatform platform }) {
+  factory MovieWebView.create({ required MoviePlatform platform, bool doLoggingIn = false }) {
     switch(platform) {
       case MoviePlatform.disney:
-        return DisneyWebView( platform: platform,);
+        return DisneyWebView( platform: platform, doLoggingIn: doLoggingIn, );
         
       case MoviePlatform.prime:
-        return PrimeWebView(platform: platform);
+        return PrimeWebView(platform: platform, doLoggingIn: doLoggingIn,);
       
       case MoviePlatform.youtube:
-        return YoutubeWebView(platform: platform);
+        return YoutubeWebView(platform: platform, doLoggingIn: doLoggingIn,);
       
       case MoviePlatform.hulu:
-        return HuluWebView(platform: platform);
+        return HuluWebView(platform: platform, doLoggingIn: doLoggingIn,);
 
       default:
         throw "Unsupported platform: $platform";
@@ -51,6 +52,7 @@ abstract class MovieWebView extends MoviePickerView {
 
   @override
   State<StatefulWidget> createState() => state;
+
   
 }
 
