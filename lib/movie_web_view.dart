@@ -8,6 +8,7 @@ import 'package:player/assets.dart';
 import 'package:player/hulu/hulu_web_view.dart';
 import 'package:player/prime/prime_web_view.dart';
 import 'package:player/splash_button.dart';
+import 'package:player/youtube/youtube_music_web_view.dart';
 import 'package:player/youtube/youtube_web_view.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:webview_flutter_wkwebview/webview_flutter_wkwebview.dart';
@@ -42,6 +43,9 @@ abstract class MovieWebView extends MoviePickerView {
       
       case MoviePlatform.hulu:
         return HuluWebView(platform: platform, doLoggingIn: doLoggingIn,);
+      
+      case MoviePlatform.youtubeMusic:
+        return YoutubeMusicWebView(platform: platform);
 
       default:
         throw "Unsupported platform: $platform";

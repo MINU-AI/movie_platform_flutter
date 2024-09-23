@@ -51,6 +51,8 @@ public class NativePlayerView: NSObject, FlutterPlatformView {
     private var systemBrightness: Double?
     
     private var keyLoader: FairplayKeyLoader?
+    
+    private var playToTheEnd = false
         
     public func view() -> UIView {
         playerView.player = player
@@ -65,6 +67,7 @@ public class NativePlayerView: NSObject, FlutterPlatformView {
         if let systemBrightness = systemBrightness {
             UIScreen.main.brightness = systemBrightness
         }
+        NotificationCenter.default.removeObserver(self)
     }
     
 }
@@ -78,7 +81,7 @@ extension NativePlayerView {
         let metadata = creationParams[PlatformViewParams.metadata] as? [String:Any]
         let moviePlatform: MoviePlatform = try! .init(rawValue: platformId)
         let asset = AVURLAsset(url: URL(string: playbackUrl)!)
-        if moviePlatform != .youtube {
+        if moviePlatform != .youtube && moviePlatform != .youtubeMusic {
             keyLoader = try FairplayKeyLoader.create(fromMoviePlatform: moviePlatform, certificateURL: certificateUrl!, licenseUrl: licenseKeyUrl, channel: channel, metadata: metadata)
             asset.resourceLoader.setDelegate(keyLoader, queue: DispatchQueue.global())
         }
@@ -97,6 +100,13 @@ extension NativePlayerView {
         } else {
             player?.pause()
         }
+        playToTheEnd = false
+        NotificationCenter.default.addObserver(self, selector: #selector(moviePlayToEnd(_ :)), name: .AVPlayerItemDidPlayToEndTime, object: playItem)
+    }
+    
+    @objc
+    func moviePlayToEnd(_ notification: Notification) {
+        playToTheEnd = true
     }
     
     override public func observeValue(forKeyPath keyPath: String?, of object: Any?, change: [NSKeyValueChangeKey : Any]?, context: UnsafeMutableRawPointer?) {
@@ -107,6 +117,9 @@ extension NativePlayerView {
                 let isPlaying = timeControlStatus == 2
                 print("Got player playing change: \(isPlaying)")
                 let arguments = ["isPlaying": isPlaying]
+                if isPlaying {
+                    playToTheEnd = false
+                }
                 channel.invokeMethod(MethodCalls.onPlayingChange.rawValue, arguments: arguments)
                 var playerState: PlayerState?
                 
@@ -230,6 +243,8 @@ extension NativePlayerView {
             case .getBrightness:
                 let brightness = Double(UIScreen.main.brightness)
                 result(brightness)
+            case .getPlayToTheEnd:
+                result(self?.playToTheEnd)
             
             default:
                 print("Unsupported method: \(methodName)")
@@ -500,6 +515,7 @@ public enum MoviePlatform: String  {
     case disney
     case prime
     case hulu
+    case youtubeMusic
     
     public init(rawValue: String) throws {
         switch rawValue {
@@ -507,6 +523,7 @@ public enum MoviePlatform: String  {
         case "disney" : self = .disney
         case "prime" : self = .prime
         case "hulu" : self = .hulu
+        case "youtubeMusic": self = .youtubeMusic
         default: throw "Unsupported movie platform: \(rawValue)"
         }
     }
@@ -524,6 +541,7 @@ public enum MethodCalls: String {
     case setBrightness
     case controlPlayer
     case getBrightness
+    case getPlayToTheEnd
     
     public init(rawValue: String) throws {
         switch rawValue {
@@ -538,6 +556,7 @@ public enum MethodCalls: String {
         case "setBrightness": self = .setBrightness
         case "controlPlayer": self = .controlPlayer
         case "getBrightness": self = .getBrightness
+        case "getPlayToTheEnd": self = .getPlayToTheEnd
         default: throw "Unsupported method call: \(rawValue)"
         }
     }

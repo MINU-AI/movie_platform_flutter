@@ -50,19 +50,7 @@ class PrimeDrmCallback(
         httpBuilder.addQueryParameter("deviceVideoCodecOverride", "H264")
         httpBuilder.addQueryParameter("deviceVideoQualityOverride", "HD")
         httpBuilder.addQueryParameter("deviceBitrateAdaptationsOverride", "CBR")
-
-        try {
-            val securityLevel = MediaDrm(C.WIDEVINE_UUID).getPropertyString("securityLevel")
-
-            if (securityLevel === "L3") {
-                httpBuilder.addQueryParameter("operatingSystemName", "Android")
-            } else {
-                httpBuilder.addQueryParameter("operatingSystemName", "Windows")
-                httpBuilder.addQueryParameter("deviceVideoQualityOverride", "HD")
-            }
-        } catch (e: UnsupportedSchemeException) {
-            e.printStackTrace()
-        }
+        httpBuilder.addQueryParameter("operatingSystemName", "Android")
 
         val base64Key: String = Base64.encodeToString(request.data, Base64.NO_WRAP)
 
@@ -97,6 +85,6 @@ class PrimeDrmCallback(
             e.printStackTrace()
         }
 
-        return ByteArray(0)
+        throw Error("Got PrimeDrmCallback error: Cannot get the key response")
     }
 }

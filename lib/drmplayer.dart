@@ -59,7 +59,8 @@ class DrmPlayer {
   }
 
   Future<bool> get isFinished async {
-    return await currentPosition == await duration;
+    final playToTheEnd = await channel.invokeMethod(MethodCalls.getPlayToTheEnd.name);
+    return playToTheEnd;
   }
 
   Future<double?> get brightness => channel.invokeMethod(MethodCalls.getBrightness.name);

@@ -14,7 +14,7 @@ class PlatformViewParams {
 }
 
 enum class MoviePlatform {
-    youtube, disney, prime, hulu;
+    youtube, disney, prime, hulu, youtubeMusic;
 
     companion object  {
         fun fromString(platformId: String): MoviePlatform {
@@ -23,6 +23,7 @@ enum class MoviePlatform {
                 disney.name -> disney
                 prime.name -> prime
                 hulu.name -> hulu
+                youtubeMusic.name -> youtubeMusic
                 else -> throw RuntimeException("Unsupported platformId: $platformId")
             }
         }
@@ -40,6 +41,7 @@ enum class MethodCalls {
     getBufferedPercentage,
     setBrightness,
     getBrightness,
+    getPlayToTheEnd,
     controlPlayer;
 
     companion object {
@@ -53,6 +55,7 @@ enum class MethodCalls {
                 getBufferedPosition.name -> getBufferedPosition
                 setBrightness.name -> setBrightness
                 getBrightness.name -> getBrightness
+                getPlayToTheEnd.name -> getPlayToTheEnd
                 else -> throw RuntimeException("Unsupported platformId: $value")
             }
         }

@@ -22,6 +22,7 @@ abstract class PlayerView extends StatefulWidget {
   final bool showFullScreen;
   final bool showControl;
   final bool playWhenReady;
+  final bool showLoading;
   final void Function(int)? onForward;
   final void Function(bool)? onTogglePlaying;
   final void Function(bool)? onFullscreen;
@@ -32,6 +33,7 @@ abstract class PlayerView extends StatefulWidget {
                     this.showFullScreen = true, 
                     this.showControl = true, 
                     this.playWhenReady = true, 
+                    this.showLoading = true,
                     this.onFullscreen, this.onForward, 
                     this.onTogglePlaying, 
                     this.onPositionChanged, 
@@ -43,6 +45,7 @@ abstract class PlayerView extends StatefulWidget {
           bool showFullscreen = true, 
           bool showControl = true, 
           bool playWhenReady = true,
+          bool showLoading = true,
           void Function(bool)? onFullscreen,
           void Function(int)? onForward, 
           void Function(bool)? onTogglePlaying,
@@ -51,7 +54,7 @@ abstract class PlayerView extends StatefulWidget {
   {
     if(Platform.isAndroid) {
       return _AndroidPlayerView(player: player, showFullScreen: showFullscreen, 
-                                showControl: showControl, playWhenReady: playWhenReady, 
+                                showControl: showControl, showLoading: showLoading, playWhenReady: playWhenReady, 
                                 onFullscreen: onFullscreen, onForward: onForward, 
                                 onTogglePlaying: onTogglePlaying, onPositionChanged: onPositionChanged, 
                                 onSeek: onSeek,
@@ -60,7 +63,7 @@ abstract class PlayerView extends StatefulWidget {
 
     if(Platform.isIOS) {
       return _IOSPlayerView(player: player, showFullScreen: showFullscreen, 
-                            showControl: showControl, playWhenReady: playWhenReady, 
+                            showControl: showControl, showLoading: showLoading, playWhenReady: playWhenReady, 
                             onFullscreen: onFullscreen, onForward: onForward, 
                             onTogglePlaying: onTogglePlaying, onPositionChanged: onPositionChanged, 
                             onSeek: onSeek, );
@@ -102,6 +105,7 @@ class _PlayerViewState extends State<PlayerView> with PlayerListener, TickerProv
 
   @override
   void initState() {
+    _showPlayerLoading = widget.showLoading;
     widget.player.addListener(this);    
     initVolumeController();    
     super.initState();
@@ -199,7 +203,7 @@ class _PlayerViewState extends State<PlayerView> with PlayerListener, TickerProv
     }    
     
     setState(() {
-      _showPlayerLoading =  state == PlayerState.bufferring;
+      _showPlayerLoading = widget.showLoading && state == PlayerState.bufferring;
     });
     
   }
@@ -229,7 +233,7 @@ class _PlayerViewState extends State<PlayerView> with PlayerListener, TickerProv
 }
 
 extension on _PlayerViewState {
-  Future<void> updateVideoProgerss() async {
+  Future<void> updateVideoProgerss() async {    
     final currentPosition = await widget.player.currentPosition;      
       final duration = await widget.player.duration;
       _bufferedPercentage = await widget.player.bufferedPercentage;
@@ -251,8 +255,7 @@ extension on _PlayerViewState {
           },);
 
           _animationController!.forward();
-      }
-
+      }      
       setState(() {
         _currentPosition = currentPosition;
         _duration = duration;
@@ -669,7 +672,7 @@ class _VerticalSeekBarState extends State<_VerticalSeekBar> {
 
 class _AndroidPlayerView extends PlayerView {
   
-  const _AndroidPlayerView({required super.player, super.showFullScreen, super.showControl, super.playWhenReady, super.onFullscreen, super.onForward, super.onTogglePlaying, super.onPositionChanged, super.onSeek });
+  const _AndroidPlayerView({required super.player, super.showFullScreen, super.showControl, super.showLoading, super.playWhenReady, super.onFullscreen, super.onForward, super.onTogglePlaying, super.onPositionChanged, super.onSeek });
   
   @override
   Widget get nativePlayerView {
@@ -687,7 +690,7 @@ class _AndroidPlayerView extends PlayerView {
 }
 
 class _IOSPlayerView extends PlayerView {
-  const _IOSPlayerView({ required super.player, super.showFullScreen, super.showControl, super.playWhenReady, super.onFullscreen, super.onForward, super.onTogglePlaying, super.onPositionChanged, super.onSeek });
+  const _IOSPlayerView({ required super.player, super.showFullScreen, super.showControl, super.showLoading, super.playWhenReady, super.onFullscreen, super.onForward, super.onTogglePlaying, super.onPositionChanged, super.onSeek });
   
   @override
   Widget get nativePlayerView {

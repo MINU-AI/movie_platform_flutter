@@ -7,6 +7,7 @@ class YoutubeApi extends MoviePlatformApi {
     final response = await _getVideoMetadata(movieId);
     final title = response["videoDetails"]["title"];
     final durationStr = response["videoDetails"]["lengthSeconds"] as String?;
+    final author = response["videoDetails"]["author"] as String?;
     int? duration;
     if(durationStr != null) {
       duration = int.tryParse(durationStr);
@@ -16,7 +17,7 @@ class YoutubeApi extends MoviePlatformApi {
 
     logger.i("Got movie info: $title, $duration, $thumbnail");
 
-    return MovieInfo(movieId: movieId, title: title, thumbnail: thumbnail, duration: duration);
+    return MovieInfo(movieId: movieId, title: title, thumbnail: thumbnail, duration: duration, author: author);
   }
 
   @override

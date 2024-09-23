@@ -3,7 +3,9 @@ package com.minu.player
 import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
+import android.media.MediaDrm
 import android.provider.Settings
+import android.util.Log
 import android.view.View
 import androidx.annotation.OptIn
 import androidx.media3.common.C
@@ -19,6 +21,7 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.dash.DashMediaSource
 import androidx.media3.exoplayer.dash.DefaultDashChunkSource
 import androidx.media3.exoplayer.drm.DefaultDrmSessionManager
+import androidx.media3.exoplayer.drm.WidevineUtil
 import androidx.media3.exoplayer.hls.HlsMediaSource
 import androidx.media3.exoplayer.source.MediaSource
 import androidx.media3.exoplayer.upstream.DefaultAllocator
@@ -48,6 +51,8 @@ class NativePlayerView(
         get() = videoView.player as ExoPlayer?
 
     var activity: Activity? = null
+
+    var playToTheEnd = false
 
     override fun getView(): View {
         return videoView
@@ -180,6 +185,10 @@ val NativePlayerView.handleMethodCall: MethodChannel.MethodCallHandler
                 result.success(brightness.toDouble())
             }
 
+            MethodCalls.getPlayToTheEnd -> {
+                result.success(playToTheEnd)
+            }
+
             else -> {
                 result.notImplemented()
             }
@@ -206,9 +215,14 @@ fun NativePlayerView.createPlayer(creationParams: Map<*, *>): Player {
 
     val playWhenReady = creationParams["playWhenReady"] as Boolean
 
+    val mediaDrm = MediaDrm(C.WIDEVINE_UUID)
+    val securityLevel = mediaDrm.getPropertyString("securityLevel")
+    Log.d(TAG, "Got Widevine securityLevel: $securityLevel")
+
     player.addListener(object: Player.Listener {
         override fun onPlaybackStateChanged(playbackState: Int) {
             super.onPlaybackStateChanged(playbackState)
+            playToTheEnd = playbackState == Player.STATE_ENDED
             methodChannel.invokeMethod(MethodCalls.onPlaybackStateChanged.name, playbackState)
         }
 
@@ -256,6 +270,7 @@ fun NativePlayerView.createMediaSource(creationParams: Map<*, *>): MediaSource {
         .setReadTimeoutMs(20000)
 
     val manifestDataSourceFactory = DefaultHttpDataSource.Factory()
+    playToTheEnd = false
 
     when(moviePlatform) {
         MoviePlatform.disney -> {
@@ -314,7 +329,7 @@ fun NativePlayerView.createMediaSource(creationParams: Map<*, *>): MediaSource {
             return dashMediaSource
         }
 
-        MoviePlatform.youtube -> {
+        MoviePlatform.youtube, MoviePlatform.youtubeMusic -> {
             val hlsMediaSource =
                 HlsMediaSource.Factory(manifestDataSourceFactory)
                     .createMediaSource(

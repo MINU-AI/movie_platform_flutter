@@ -23,6 +23,7 @@ enum MethodCalls {
   getBufferedPercentage,
   setBrightness,
   getBrightness,
+  getPlayToTheEnd,
   controlPlayer;
 
   static MethodCalls fromString(String methodName) {
@@ -47,6 +48,8 @@ enum MethodCalls {
         return setBrightness;
       case "getBrightness":
         return getBrightness;
+      case "getPlayToTheEnd":
+        return getPlayToTheEnd;
       default:
         throw "Unsupported method call :$methodName";
     }

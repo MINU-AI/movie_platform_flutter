@@ -29,6 +29,7 @@ abstract class MoviePlatformApi with NetworkService {
       case MoviePlatform.prime:
         return PrimeApi();
       case MoviePlatform.youtube:
+      case MoviePlatform.youtubeMusic:
         return YoutubeApi();
       case MoviePlatform.hulu:
         return HuluApi();
@@ -44,6 +45,7 @@ enum MoviePlatform {
   youtube,
   disney,
   hulu,
+  youtubeMusic,
   prime;
 
   static MoviePlatform fromString(String value) {
@@ -56,6 +58,8 @@ enum MoviePlatform {
         return youtube;
       case "hulu":
         return hulu;
+      case "youtubeMusic":
+        return youtubeMusic;
       default:
         throw "Unsupported platform type: $value";
     }
@@ -67,8 +71,9 @@ final class MovieInfo {
   final String title;
   final String? thumbnail;
   final int? duration;
+  final String? author;
 
-  MovieInfo({required this.title, required this.movieId, this.thumbnail, this.duration});
+  MovieInfo({required this.title, required this.movieId, this.thumbnail, this.duration, this.author });
 
   dynamic toJson() {
     return {
@@ -131,6 +136,7 @@ Future<bool> get _isPrimeLoggedIn async {
 Future<bool> isMoviePlatformLoggedIn(MoviePlatform platform) async {
   switch(platform) {
     case MoviePlatform.youtube:
+    case MoviePlatform.youtubeMusic:
       return true;
     case MoviePlatform.disney:
       return _isDiseyLoggedIn;
