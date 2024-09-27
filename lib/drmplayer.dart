@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/services.dart';
 
-import 'movie_platform_api.dart';
+import 'movie_repository.dart';
 import 'native_constant.dart';
 
 class DrmPlayer {
@@ -93,7 +93,7 @@ class DrmPlayer {
     switch(nativeCall) {
       case MethodCalls.refreshToken:
         final platformType = MoviePlatform.fromString(call.arguments as String);
-        final platformApi = MoviePlatformApi.create(platformType);
+        final platformApi = MovieRepository.create(platformType);
         return platformApi.refreshToken();
       
       case MethodCalls.onPlaybackStateChanged:

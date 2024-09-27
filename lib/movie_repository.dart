@@ -7,7 +7,7 @@ import 'package:player/youtube/youtube_api.dart';
 
 import 'disney/disney_api.dart';
 
-abstract class MoviePlatformApi with NetworkService {
+abstract class MovieRepository with NetworkService {
   Future<MovieInfo> getMovieInfo(String movieId);
 
   Future<MoviePlayback> getPlaybackUrl(String movieId);
@@ -18,11 +18,11 @@ abstract class MoviePlatformApi with NetworkService {
 
   Future<Map<String, dynamic>> get metadata => Future.value({});
 
-  MoviePlatformApi();
+  MovieRepository();
 
   final cacheManager = dataCacheManager;
 
-  factory MoviePlatformApi.create(MoviePlatform platform) {
+  factory MovieRepository.create(MoviePlatform platform) {
     switch(platform) {
       case MoviePlatform.disney:
         return DisneyApi();

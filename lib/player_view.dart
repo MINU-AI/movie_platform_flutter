@@ -97,7 +97,7 @@ class _PlayerViewState extends State<PlayerView> with PlayerListener, TickerProv
   var _isLanscape = false;
   var _isChangingVolume = false;
   double? _currentBrightness;
-  bool? _playToEnd;
+  var _playToEnd = false;
 
   double get seekBarWidth => MediaQuery.of(context).size.width;
 
@@ -193,27 +193,26 @@ class _PlayerViewState extends State<PlayerView> with PlayerListener, TickerProv
   @override
   void onPlaybackStateChanged(PlayerState state) {
     // logger.i("Got onPlaybackStateChanged: $state");
-    if(state == PlayerState.end) {
+    _playToEnd = state == PlayerState.end;
+
+    if(_playToEnd) {
       releaseUpdatePlayerTimer();
-      _playToEnd = true;
-      setState(() {
-        _currentPosition = _duration;  
-        _progressWidth = progressMaxWidth;
-      });      
+      _currentPosition = _duration;  
+      _progressWidth = progressMaxWidth;
     }    
+    _showPlayerLoading = widget.showLoading && state == PlayerState.bufferring;
     
-    setState(() {
-      _showPlayerLoading = widget.showLoading && state == PlayerState.bufferring;
-    });
-    
+    setState(() {      
+    });    
   }
   
   @override
   void onPlayerError(PlayerError error) {
     setState(() {
-        _showPlayerLoading = false;  
-        showAlertDialog(title: "Cannot play the movie", content: "${error.errorCodeName} - ${error.message}");
-      }); 
+      _showPlayerLoading = false;  
+      showAlertDialog(title: "Cannot play the movie", content: "${error.errorCodeName} - ${error.message}");
+    }); 
+    _playToEnd = false;
   }
   
   @override
@@ -322,7 +321,7 @@ extension on _PlayerViewState {
       return null;
     }
     final newPosition = (_progressWidth / progressMaxWidth) * duration;
-    logger.i("Got new position: $newPosition, ${newPosition.round()}");
+    // logger.i("Got new position: $newPosition, ${newPosition.round()}");
     final seekDuration = Duration(microseconds: (newPosition * 1000).toInt());
     widget.player.seek(seekDuration);
     return seekDuration;
@@ -425,6 +424,7 @@ extension on _PlayerViewState {
                   child: GestureDetector(
                       onHorizontalDragStart: (details) {
                         _isSeeking = true;
+                        _playToEnd = false;
                         releaseControlTimer();
                         releaseUpdatePlayerTimer();
                       },

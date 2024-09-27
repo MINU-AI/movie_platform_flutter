@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 
 import 'full_screen_modal_sheet.dart';
-import 'movie_platform_api.dart';
+import 'movie_repository.dart';
 import 'movie_web_view.dart';
 
 abstract class MoviePickerView extends StatefulWidget {

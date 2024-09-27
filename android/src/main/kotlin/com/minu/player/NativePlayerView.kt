@@ -13,6 +13,7 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.MimeTypes
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
+import androidx.media3.common.Tracks
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.datasource.FileDataSource
@@ -239,6 +240,16 @@ fun NativePlayerView.createPlayer(creationParams: Map<*, *>): Player {
             val argument = mutableMapOf<String, Any?>()
             argument["isPlaying"] = isPlaying
             methodChannel.invokeMethod(MethodCalls.onPlayingChange.name, argument)
+        }
+
+        override fun onTracksChanged(tracks: Tracks) {
+            super.onTracksChanged(tracks)
+            for (trackGroup in tracks.groups) {
+                for (i in 0..<trackGroup.length) {
+                    val format = trackGroup.getTrackFormat(i)
+                    Log.d(TAG, "Got video format: ${format.sampleMimeType}, ${format.codecs}, ${format.bitrate}, ${format.width}, ${format.height}")
+                }
+            }
         }
 
     })

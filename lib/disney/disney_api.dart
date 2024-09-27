@@ -3,47 +3,48 @@ import 'dart:io';
 
 import '../cache_data_manager.dart';
 import '../logger.dart';
-import '../movie_platform_api.dart';
+import '../movie_repository.dart';
 
-class DisneyApi extends MoviePlatformApi {
+class DisneyApi extends MovieRepository {
   dynamic config;
-  var _retryGetPlayback = 0;
 
   @override
   Future<MovieInfo> getMovieInfo(String movieId) async {
-    final resource = await _getResource(movieId);  
-    final item = resource["item"];
-    var title = item["visuals"]["title"] as String;
-    final isSeries = resource["sequentialEpisode"] as bool;
-    if(isSeries) {
-      final fullEpisodeTitle = item["visuals"]["fullEpisodeTitle"] as String?;
-      if(fullEpisodeTitle != null) {
-        title += " - $fullEpisodeTitle";
-      } else {
-        final fullEpisodeTitleTts = item["visuals"]["fullEpisodeTitleTts"] as String?;
-        if(fullEpisodeTitleTts != null) {
-          title += " - $fullEpisodeTitleTts";
+    try {
+      final resource = await _getResource(movieId);  
+      final item = resource["item"];
+      var title = item["visuals"]["title"] as String;
+      final isSeries = resource["sequentialEpisode"] as bool;
+      if(isSeries) {
+        final fullEpisodeTitle = item["visuals"]["fullEpisodeTitle"] as String?;
+        if(fullEpisodeTitle != null) {
+          title += " - $fullEpisodeTitle";
+        } else {
+          final fullEpisodeTitleTts = item["visuals"]["fullEpisodeTitleTts"] as String?;
+          if(fullEpisodeTitleTts != null) {
+            title += " - $fullEpisodeTitleTts";
+          }
         }
       }
+
+      var thumbnailData = item["visuals"]["artwork"]["standard"]["tile"];
+      thumbnailData ??= item["visuals"]["artwork"]["standard"]["thumbnail"];
+      thumbnailData ??= item["visuals"]["artwork"]["standard"]["title_treatment"];
+      thumbnailData = thumbnailData as Map;
+      final imageId = thumbnailData.values.first["imageId"] as String?;
+      final thumbnail = "https://disney.images.edge.bamgrid.com/ripcut-delivery/v2/variant/disney/$imageId/compose?format=webp&width=200";
+      final durationInMillisec = item["visuals"]["durationMs"] as int?;
+
+      return MovieInfo(movieId: movieId, title: title, thumbnail: thumbnail, duration: durationInMillisec);
+    } catch(e) {
+      logger.e("Got getMovieInfo error: $e");      
+      await _refreshToken();
+      return getMovieInfo(movieId);
     }
-
-    var thumbnailData = item["visuals"]["artwork"]["standard"]["tile"];
-    thumbnailData ??= item["visuals"]["artwork"]["standard"]["thumbnail"];
-    thumbnailData ??= item["visuals"]["artwork"]["standard"]["title_treatment"];
-    thumbnailData = thumbnailData as Map;
-    final imageId = thumbnailData.values.first["imageId"] as String?;
-    final thumbnail = "https://disney.images.edge.bamgrid.com/ripcut-delivery/v2/variant/disney/$imageId/compose?format=webp&width=200";
-    final durationInMillisec = item["visuals"]["durationMs"] as int?;
-
-    return MovieInfo(movieId: movieId, title: title, thumbnail: thumbnail, duration: durationInMillisec);
   }
 
   @override
   Future<MoviePlayback> getPlaybackUrl(String movieId) async {  
-    if(_retryGetPlayback > 4) {
-      throw "Got getPlaybackUrl error: exceeded retry times";
-    }
-
     try {  
       final resourceId = await _getResourceId(movieId);
       final playbackEncryptionDefault = config["services"]["media"]["extras"]["playbackEncryptionDefault"] as String;
@@ -87,8 +88,7 @@ class DisneyApi extends MoviePlatformApi {
       logger.i("Got movie playback: $mediaPlayback");
       return mediaPlayback;
     } catch(e) {
-      await _refreshToken();
-      _retryGetPlayback++;
+      await _refreshToken();      
       return getPlaybackUrl(movieId);
     }
   }

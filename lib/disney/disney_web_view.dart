@@ -5,7 +5,7 @@ import 'package:player/extension.dart';
 
 import '../cache_data_manager.dart';
 import '../logger.dart';
-import '../movie_platform_api.dart';
+import '../movie_repository.dart';
 import '../movie_web_view.dart';
 
 class DisneyWebView extends MovieWebView {
@@ -42,7 +42,7 @@ class _DisneyState extends PlatformState<DisneyWebView> {
       if(profileId.isNotEmpty) {
         await getApiToken();
         try {
-          await platformApi.getToken(params: [profileId]);
+          await movieRepo.getToken(params: [profileId]);
           if(widget.doLoggingIn) {
             popScreen(true);
           }
@@ -57,17 +57,10 @@ class _DisneyState extends PlatformState<DisneyWebView> {
       logger.i("Get contentId from uri: $contentId");
       if(contentId != null) { 
         await getApiToken();
-        try {       
-          final movieInfo = await platformApi.getMovieInfo(contentId);          
-          // logger.i("Get movie info: $movieInfo");        
-          final moviePlayback = await platformApi.getPlaybackUrl(contentId);          
-          final moviePayload = MoviePayload(playback: moviePlayback, info: movieInfo, metadata: await platformApi.metadata);
-          popScreen(moviePayload);
-        } catch(e) {
-          logger.e("Get movie info: $e");
-        }
-      }
-       toggleLoading(false);
+        handleMovieId(contentId);
+        return;
+      }       
+      toggleLoading(false);
     }
   }
   

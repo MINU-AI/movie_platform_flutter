@@ -136,10 +136,20 @@ extension on _PrimeState {
       final movieInfo = _extractMovieInfo(document, movieId: movieId, episode: episode);
       logger.i("Got movie title: $movieInfo");
       await _getCookies();
-      final moviePlayback = await platformApi.getPlaybackUrl(movieId);
-      final Map<String, dynamic> metadata = await platformApi.metadata;
-      final moviePayload = MoviePayload(playback: moviePlayback, info: movieInfo, metadata: metadata);
-      popScreen(moviePayload);
+      try {
+        final moviePlayback = await movieRepo.getPlaybackUrl(movieId);
+        final Map<String, dynamic> metadata = await movieRepo.metadata;
+        final moviePayload = MoviePayload(playback: moviePlayback, info: movieInfo, metadata: metadata);
+        popScreen(moviePayload);
+      } catch(e) {
+        logger.e(e);               
+        if(mounted) {
+          showAlertDialog(context: context, title: "Sorry", content: "Cannot play the video right now!", onOkPressed: () => popScreen(),);
+          return;
+        }
+        popScreen();
+        return;
+      }
     }
 
     toggleLoading(false);

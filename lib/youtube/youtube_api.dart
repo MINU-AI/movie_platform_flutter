@@ -1,7 +1,7 @@
 import 'package:player/logger.dart';
 import 'package:player/player.dart';
 
-class YoutubeApi extends MoviePlatformApi {
+class YoutubeApi extends MovieRepository {
   @override
   Future<MovieInfo> getMovieInfo(String movieId) async {
     final response = await _getVideoMetadata(movieId);

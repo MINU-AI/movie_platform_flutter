@@ -2,11 +2,11 @@ import 'package:path_provider/path_provider.dart';
 import 'package:player/cache_data_manager.dart';
 import 'package:player/extension.dart';
 import 'package:player/logger.dart';
-import 'package:player/movie_platform_api.dart';
+import 'package:player/movie_repository.dart';
 import 'package:xml/xml.dart';
 import 'dart:io';
 
-class HuluApi extends MoviePlatformApi {
+class HuluApi extends MovieRepository {
   @override
   Future<MovieInfo> getMovieInfo(String movieId, [int retry = 1]) async {
     if(retry > 4) {

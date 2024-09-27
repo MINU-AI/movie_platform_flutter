@@ -1,6 +1,5 @@
-import 'package:flutter/material.dart';
 import 'package:player/logger.dart';
-import 'package:player/movie_platform_api.dart';
+import 'package:player/movie_repository.dart';
 import 'package:player/movie_web_view.dart';
 
 class YoutubeMusicWebView extends MovieWebView {
@@ -32,15 +31,14 @@ class _YoutubeMusicState extends PlatformState<YoutubeMusicWebView> {
       final uri = Uri.parse(url);
       final watchId = uri.queryParameters["v"];
       logger.i("Got watchId: $watchId");
-      if(watchId != null) {
-        loadingBackgroundColor = Colors.black.withOpacity(0.4);
+      if(watchId != null) {        
         toggleLoading(true);
         try {
-          final movieInfo = await platformApi.getMovieInfo(watchId);
+          final movieInfo = await movieRepo.getMovieInfo(watchId);
           logger.i("Got movie info: $movieInfo");
-          final moviePlayback = await platformApi.getPlaybackUrl(watchId);
+          final moviePlayback = await movieRepo.getPlaybackUrl(watchId);
           logger.i("Got movie playback: $moviePlayback");
-          final payload = MoviePayload(playback: moviePlayback, info: movieInfo, metadata: await platformApi.metadata);
+          final payload = MoviePayload(playback: moviePlayback, info: movieInfo, metadata: await movieRepo.metadata);
           popScreen(payload);
         } catch(e) {
           logger.e(e);

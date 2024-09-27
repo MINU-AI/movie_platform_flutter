@@ -1,38 +1,22 @@
+import 'dart:ui';
+
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/material.dart';
 
 class LoadingView extends StatelessWidget {
-  final Color backgroundColor;
 
-  const LoadingView({super.key, this.backgroundColor =  const Color(0x60000000) });
+  const LoadingView({super.key });
 
   
   @override
   Widget build(BuildContext context) {
-    return Stack(
-            alignment: AlignmentDirectional.center,
-            children: [
-              Container(color: backgroundColor,),
-              // const CupertinoActivityIndicator(color: AppColors.indicatorColor, radius: 12,)
-              Container(
-                width: 120,
-                height: 120,
+    return BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 2, sigmaY: 2),
+            child: Container(
+                width: double.infinity,
+                height: double.infinity,
                 alignment: Alignment.center,
-                decoration: BoxDecoration(color: const Color(0xFFFFFFFF), borderRadius: BorderRadius.circular(12)),
-                child: const Column(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          CupertinoActivityIndicator(color: Colors.black,),
-
-                          SizedBox(height: 12,),
-
-                          Text("Loading...", style: TextStyle(color: Colors.black, fontSize: 14, decoration: TextDecoration.none),),
-                        ],
-                      ),
+                child: const CupertinoActivityIndicator(color: Color(0xFFFFFFFF), radius: 12,)
               )
-            ],
           );
   }
 }

@@ -10,7 +10,6 @@ public class PlayerPlugin: NSObject, FlutterPlugin {
       let viewFactory = NativeViewFactory(mesenger: registrar.messenger())
       registrar.register(viewFactory, withId: PlatformViewType.widevinePlayer)
   }
-    
 }
 
 
@@ -107,6 +106,7 @@ extension NativePlayerView {
     @objc
     func moviePlayToEnd(_ notification: Notification) {
         playToTheEnd = true
+        channel.invokeMethod(MethodCalls.onPlaybackStateChanged.rawValue, arguments: PlayerState.end.rawValue)
     }
     
     override public func observeValue(forKeyPath keyPath: String?, of object: Any?, change: [NSKeyValueChangeKey : Any]?, context: UnsafeMutableRawPointer?) {
@@ -117,9 +117,7 @@ extension NativePlayerView {
                 let isPlaying = timeControlStatus == 2
                 print("Got player playing change: \(isPlaying)")
                 let arguments = ["isPlaying": isPlaying]
-                if isPlaying {
-                    playToTheEnd = false
-                }
+                playToTheEnd = false
                 channel.invokeMethod(MethodCalls.onPlayingChange.rawValue, arguments: arguments)
                 var playerState: PlayerState?
                 

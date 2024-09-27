@@ -1,9 +1,8 @@
 import 'dart:async';
 
-import 'package:flutter/material.dart';
 import 'package:player/logger.dart';
-import 'package:player/movie_platform_api.dart';
 import 'package:player/movie_web_view.dart';
+import 'package:webview_flutter/webview_flutter.dart';
 
 class YoutubeWebView extends MovieWebView {
   const YoutubeWebView({super.key, required super.platform, super.doLoggingIn });
@@ -34,23 +33,12 @@ class _YoutubeState extends PlatformState<YoutubeWebView> {
     if(url.contains("/watch")) {
       final uri = Uri.parse(url);
       final watchId = uri.queryParameters["v"];
-      logger.i("Got watchId: $watchId");
-      if(watchId != null) {
-        loadingBackgroundColor = Colors.black.withOpacity(0.4);
-        toggleLoading(true);
-        try {
-          final movieInfo = await platformApi.getMovieInfo(watchId);
-          logger.i("Got movie info: $movieInfo");
-          final moviePlayback = await platformApi.getPlaybackUrl(watchId);
-          logger.i("Got movie playback: $moviePlayback");
-          final payload = MoviePayload(playback: moviePlayback, info: movieInfo, metadata: await platformApi.metadata);
-          popScreen(payload);
-        } catch(e) {
-          logger.e(e);
-        }
-      }
-    }
-    
+      logger.i("Got watchId: $watchId");           
+      if(watchId != null) {        
+        navigationDecision = NavigationDecision.prevent; 
+        await handleMovieId(watchId);
+      }            
+    }    
   }
 
   @override

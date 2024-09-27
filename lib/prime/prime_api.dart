@@ -5,7 +5,7 @@ import 'package:player/logger.dart';
 import 'package:player/player.dart';
 import 'package:uuid/uuid.dart';
 
-class PrimeApi extends MoviePlatformApi {
+class PrimeApi extends MovieRepository {
   AmazonUserProfile? _userProfile;
   late String movieId;
 

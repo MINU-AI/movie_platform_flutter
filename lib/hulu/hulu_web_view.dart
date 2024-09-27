@@ -1,6 +1,6 @@
 import 'package:player/cache_data_manager.dart';
 import 'package:player/logger.dart';
-import 'package:player/movie_platform_api.dart';
+import 'package:player/movie_repository.dart';
 import 'package:player/movie_web_view.dart';
 import 'package:webview_cookie_manager/webview_cookie_manager.dart';
 
@@ -44,25 +44,8 @@ class _HuluState extends PlatformState<HuluWebView> {
           toggleLoading(false);
           return;
         }
-        // const jsCode = """
-        //                 let element = document.querySelector(".CloseButton");
-        //                 element.click();
-        //                """;
-        // runJavascript(jsCode);
         
-        try {
-          final movieInfo = await platformApi.getMovieInfo(movieId);
-          logger.i("Got movie info: $movieInfo");
-          final moviePlayback = await platformApi.getPlaybackUrl(movieId);
-          logger.i("Got movie playback: $moviePlayback");      
-          final payload = MoviePayload(playback: moviePlayback, info: movieInfo, metadata: await platformApi.metadata);
-
-          popScreen(payload);          
-        } catch(e) {
-          logger.e("onUrlChange: $e");          
-          toggleLoading(false);
-          popScreen();
-        }
+        handleMovieId(movieId);
       }
     }
   }

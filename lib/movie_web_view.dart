@@ -1,6 +1,7 @@
 
 import 'dart:async';
 
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
@@ -8,6 +9,7 @@ import 'package:player/assets.dart';
 import 'package:player/hulu/hulu_web_view.dart';
 import 'package:player/prime/prime_web_view.dart';
 import 'package:player/splash_button.dart';
+import 'package:player/text_view.dart';
 import 'package:player/youtube/youtube_music_web_view.dart';
 import 'package:player/youtube/youtube_web_view.dart';
 import 'package:webview_flutter/webview_flutter.dart';
@@ -17,7 +19,7 @@ import 'disney/disney_web_view.dart';
 import 'loading_view.dart';
 import 'logger.dart';
 import 'movie_picker.dart';
-import 'movie_platform_api.dart';
+import 'movie_repository.dart';
 
 
 final Set<Factory<OneSequenceGestureRecognizer>> gestureRecognizers = {
@@ -63,12 +65,11 @@ abstract class MovieWebView extends MoviePickerView {
 abstract class PlatformState< V extends MovieWebView> extends State<V> {
 
   late final WebViewController _controller;
-  MoviePlatformApi? _moviePlatformApi;
-  Color _loadingBackgroundColor =  const Color(0x60000000);
-
-  MoviePlatformApi get platformApi {
-    _moviePlatformApi ??= MoviePlatformApi.create(widget.platform);
-    return _moviePlatformApi!;
+  MovieRepository? _movieRepo;
+  
+  MovieRepository get movieRepo {
+    _movieRepo ??= MovieRepository.create(widget.platform);
+    return _movieRepo!;
   }
 
   void onUrlChange(String url) {}
@@ -87,12 +88,6 @@ abstract class PlatformState< V extends MovieWebView> extends State<V> {
 
   String? get injectedJavascript {
     return null;
-  }
-
-  set loadingBackgroundColor(Color value) {
-    setState(() {
-      _loadingBackgroundColor = value;  
-    });    
   }
 
   abstract final String url;
@@ -116,12 +111,17 @@ abstract class PlatformState< V extends MovieWebView> extends State<V> {
     });
   }
 
+  Future<void> goBack() async {
+    _controller.goBack();
+  }
+
+  NavigationDecision navigationDecision = NavigationDecision.navigate;
+
   void initWebView() {
     late final PlatformWebViewControllerCreationParams params;
     if (WebViewPlatform.instance is WebKitWebViewPlatform) {
       params = WebKitWebViewControllerCreationParams(
-        allowsInlineMediaPlayback: true,
-        mediaTypesRequiringUserAction: const <PlaybackMediaTypes>{},
+        allowsInlineMediaPlayback: false,                
       );
     } else {
       params = const PlatformWebViewControllerCreationParams();
@@ -158,7 +158,7 @@ abstract class PlatformState< V extends MovieWebView> extends State<V> {
             logger.e("onWebResourceError: $error");
           },
           onNavigationRequest: (NavigationRequest request) {
-            return NavigationDecision.navigate;
+            return navigationDecision;
           },
         ),
       )
@@ -224,7 +224,7 @@ abstract class PlatformState< V extends MovieWebView> extends State<V> {
 
                       Visibility(
                         visible: _showLoading,
-                        child: LoadingView(backgroundColor: _loadingBackgroundColor,),
+                        child: const LoadingView(),
                       ),                      
                     ],
                   )
@@ -241,3 +241,49 @@ abstract class PlatformState< V extends MovieWebView> extends State<V> {
 
   Future<Object> runJavaScriptReturningResult(String js) => _controller.runJavaScriptReturningResult(js);
 }
+
+extension Common on PlatformState {
+  Future<void> handleMovieId(String movieId) async {
+    toggleLoading(true);
+    try {
+      final movieInfo = await movieRepo.getMovieInfo(movieId);
+      logger.i("Got movie info: $movieInfo");
+      final moviePlayback = await movieRepo.getPlaybackUrl(movieId);
+      logger.i("Got movie playback: $moviePlayback");
+      final payload = MoviePayload(playback: moviePlayback, info: movieInfo, metadata: await movieRepo.metadata);                      
+      popScreen(payload);
+    } catch(e) {
+      logger.e(e);          
+      if(mounted) {
+        showAlertDialog(context: context, title: "Sorry", content: "Cannot play the video right now!", onOkPressed: () {
+          goBack();
+        },);        
+      }
+      navigationDecision = NavigationDecision.navigate;
+      toggleLoading(false);      
+    }
+  }
+}
+
+void showAlertDialog({ required BuildContext context, String? title, String? content, void Function()? onOkPressed }) {
+    final theme = Theme.of(context);
+    final isDarkMode = theme.brightness == Brightness.dark;
+    final color =Color(isDarkMode ? 0xFFFFFFFF : 0xFF000000);
+
+    showCupertinoDialog(context: context, builder: (_) {
+        return CupertinoAlertDialog(
+                  title: title != null ? TextView(text: title, fontSize: 16, fontWeight: FontWeight.w600, color: color,) : null,
+                  content: content != null ? TextView(text: content, fontSize: 12, color: color,) : const SizedBox(),
+                  actions: [
+                    CupertinoDialogAction(
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                        onOkPressed?.call();
+                      },
+                      child: const TextView(text: "OK", fontSize: 17, color: Color(0xFF007AFF)),
+                    ),
+
+                  ],
+               );
+      });
+  }
