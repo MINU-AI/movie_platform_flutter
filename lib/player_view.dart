@@ -26,7 +26,7 @@ abstract class PlayerView extends StatefulWidget {
   final void Function(int)? onForward;
   final void Function(bool)? onTogglePlaying;
   final void Function(bool)? onFullscreen;
-  final void Function(int)? onPositionChanged;
+  final void Function(Duration)? onTimeChanged;
   final void Function(Duration)? onSeek;
 
   const PlayerView({super.key, required this.player, 
@@ -36,7 +36,7 @@ abstract class PlayerView extends StatefulWidget {
                     this.showLoading = true,
                     this.onFullscreen, this.onForward, 
                     this.onTogglePlaying, 
-                    this.onPositionChanged, 
+                    this.onTimeChanged, 
                     this.onSeek });
 
   Widget get nativePlayerView;
@@ -49,14 +49,14 @@ abstract class PlayerView extends StatefulWidget {
           void Function(bool)? onFullscreen,
           void Function(int)? onForward, 
           void Function(bool)? onTogglePlaying,
-          void Function(int)? onPositionChanged, 
+          void Function(Duration)? onTimeChanged, 
           void Function(Duration)? onSeek }) 
   {
     if(Platform.isAndroid) {
       return _AndroidPlayerView(player: player, showFullScreen: showFullscreen, 
                                 showControl: showControl, showLoading: showLoading, playWhenReady: playWhenReady, 
                                 onFullscreen: onFullscreen, onForward: onForward, 
-                                onTogglePlaying: onTogglePlaying, onPositionChanged: onPositionChanged, 
+                                onTogglePlaying: onTogglePlaying, onTimeChanged: onTimeChanged, 
                                 onSeek: onSeek,
                               );
     }
@@ -65,7 +65,7 @@ abstract class PlayerView extends StatefulWidget {
       return _IOSPlayerView(player: player, showFullScreen: showFullscreen, 
                             showControl: showControl, showLoading: showLoading, playWhenReady: playWhenReady, 
                             onFullscreen: onFullscreen, onForward: onForward, 
-                            onTogglePlaying: onTogglePlaying, onPositionChanged: onPositionChanged, 
+                            onTogglePlaying: onTogglePlaying, onTimeChanged: onTimeChanged, 
                             onSeek: onSeek, );
     }
     throw "Unimplemented for this platform";
@@ -240,7 +240,7 @@ extension on _PlayerViewState {
         return;
       }
       // logger.i("Got currentPosition: $currentPosition, $bufferedPercentage");
-      widget.onPositionChanged?.call(currentPosition);
+      widget.onTimeChanged?.call(Duration(milliseconds: currentPosition));
       final newBufferWidth = (_bufferedPercentage! / 100.0) * seekBarWidth;
       if(newBufferWidth != _progressBufferWidth) {
           final animationDuration = ((_progressBufferWidth - newBufferWidth).abs() / seekBarWidth) * _animationDuration;
@@ -672,7 +672,7 @@ class _VerticalSeekBarState extends State<_VerticalSeekBar> {
 
 class _AndroidPlayerView extends PlayerView {
   
-  const _AndroidPlayerView({required super.player, super.showFullScreen, super.showControl, super.showLoading, super.playWhenReady, super.onFullscreen, super.onForward, super.onTogglePlaying, super.onPositionChanged, super.onSeek });
+  const _AndroidPlayerView({required super.player, super.showFullScreen, super.showControl, super.showLoading, super.playWhenReady, super.onFullscreen, super.onForward, super.onTogglePlaying, super.onTimeChanged, super.onSeek });
   
   @override
   Widget get nativePlayerView {
@@ -690,7 +690,7 @@ class _AndroidPlayerView extends PlayerView {
 }
 
 class _IOSPlayerView extends PlayerView {
-  const _IOSPlayerView({ required super.player, super.showFullScreen, super.showControl, super.showLoading, super.playWhenReady, super.onFullscreen, super.onForward, super.onTogglePlaying, super.onPositionChanged, super.onSeek });
+  const _IOSPlayerView({ required super.player, super.showFullScreen, super.showControl, super.showLoading, super.playWhenReady, super.onFullscreen, super.onForward, super.onTogglePlaying, super.onTimeChanged, super.onSeek });
   
   @override
   Widget get nativePlayerView {
