@@ -132,7 +132,7 @@ class _PlayerViewState extends State<PlayerView> with PlayerListener, TickerProv
                 ),
 
                 Visibility(
-                  visible: widget.showControl && _showControl,
+                  visible: _showControl,
                   child: playerControlsView,
                 ),                                                  
               ],
@@ -394,7 +394,8 @@ extension on _PlayerViewState {
 
 extension on _PlayerViewState {
   Widget get playerControlsView {
-    final playerIsReady = _isPlaying != null;
+    final playerIsReady = _isPlaying != null; 
+    final canSeekPlayer = widget.showControl;   
 
     return Stack(
               alignment: Alignment.center,
@@ -422,16 +423,25 @@ extension on _PlayerViewState {
                   bottom: widget.showFullScreen ? 28 : 8,
                   child: GestureDetector(
                       onHorizontalDragStart: (details) {
+                        if(!canSeekPlayer) {
+                          return;
+                        }
                         _isSeeking = true;
                         _playToEnd = false;
                         releaseControlTimer();
                         releaseUpdatePlayerTimer();
                       },
                       onHorizontalDragUpdate: (details) {
+                        if(!canSeekPlayer) {
+                          return;
+                        }
                         logger.i("onHorizontalDragUpdate: ${details.delta.dx}"); 
                         updateSeekbarProgress(details.delta);
                       },
                       onHorizontalDragEnd: (details) async {
+                        if(!canSeekPlayer) {
+                          return;
+                        }
                         logger.i("onHorizontalDragEnd: $details");
                         final duration = await updatePlayerPosition();
                         _isSeeking = false;   
@@ -490,7 +500,7 @@ extension on _PlayerViewState {
                       
                     )) : const SizedBox(height: 0,),     
 
-                playerIsReady ? Row(
+                playerIsReady && widget.showControl ? Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
 
