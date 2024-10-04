@@ -23,6 +23,8 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.dash.DashMediaSource
 import androidx.media3.exoplayer.dash.DefaultDashChunkSource
 import androidx.media3.exoplayer.drm.DefaultDrmSessionManager
+import androidx.media3.exoplayer.drm.ExoMediaDrm
+import androidx.media3.exoplayer.drm.FrameworkMediaDrm
 import androidx.media3.exoplayer.drm.WidevineUtil
 import androidx.media3.exoplayer.hls.HlsMediaSource
 import androidx.media3.exoplayer.source.MediaSource
@@ -33,6 +35,10 @@ import com.minu.player.netflix.readInstanceProperty
 import io.flutter.plugin.common.BinaryMessenger
 import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugin.platform.PlatformView
+import kotlin.reflect.KProperty1
+import kotlin.reflect.KVisibility
+import kotlin.reflect.full.memberProperties
+import kotlin.reflect.jvm.isAccessible
 
 
 class NativePlayerView(
@@ -320,7 +326,9 @@ fun NativePlayerView.createMediaSource(creationParams: Map<*, *>): MediaSource {
             val mid = metadata["mid"] as String
             val cookies = metadata["cookies"] as String
             val primeMediaDrmCallback = PrimeDrmCallback(dataSourceFactory, movieId, deviceId, mid, cookies )
-            val drmSessionManager = DefaultDrmSessionManager.Builder().build(primeMediaDrmCallback)
+            val drmSessionManager = DefaultDrmSessionManager
+                                                                .Builder()
+                                                                .build(primeMediaDrmCallback)
             val dashChunkSourceFactory = DefaultDashChunkSource.Factory(dataSourceFactory)
 
             val dashMediaSource = DashMediaSource.Factory(dashChunkSourceFactory, manifestDataSourceFactory)
@@ -360,7 +368,21 @@ fun NativePlayerView.createMediaSource(creationParams: Map<*, *>): MediaSource {
             val dashChunkSourceFactory = DefaultDashChunkSource.Factory(dataSourceFactory)
             val token = metadata["token"] as String
             val primeMediaDrmCallback = HuluDrmCallback(dataSourceFactory, licenseKeyUrl!!, token)
-            val drmSessionManager = DefaultDrmSessionManager.Builder().build(primeMediaDrmCallback)
+
+            val frameworkMediaDrm = FrameworkMediaDrm.newInstance(C.WIDEVINE_UUID)
+            val kClass = frameworkMediaDrm::class
+            val mediaDrmProperty = kClass.memberProperties.find { it.name == "mediaDrm" }
+            mediaDrmProperty?.let { item ->
+                item.isAccessible = true
+                item as KProperty1<FrameworkMediaDrm, MediaDrm>
+                val value = item.get(frameworkMediaDrm)
+                value.setPropertyString("securityLevel", "L3")
+            }
+
+            val drmSessionManager = DefaultDrmSessionManager
+                .Builder()
+                .setUuidAndExoMediaDrmProvider(C.WIDEVINE_UUID) { frameworkMediaDrm }
+                .build(primeMediaDrmCallback)
             val dashMediaSource = DashMediaSource.Factory(dashChunkSourceFactory, fileSourceFactory)
                 .setDrmSessionManagerProvider { drmSessionManager }
                 .createMediaSource(

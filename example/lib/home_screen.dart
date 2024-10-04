@@ -17,7 +17,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeState extends State<HomeScreen> {
   DrmPlayer? _player;
 
-  final platform = MoviePlatform.youtube;
+  final platform = MoviePlatform.hulu;
   var _isLandscape = false;
 
   @override

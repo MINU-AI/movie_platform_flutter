@@ -254,12 +254,14 @@ extension on _PlayerViewState {
           },);
 
           _animationController!.forward();
-      }      
-      setState(() {
-        _currentPosition = currentPosition;
-        _duration = duration;
-        _progressWidth = (currentPosition / duration) * progressMaxWidth;  
-      });
+      }
+      if(mounted) {
+        setState(() {
+          _currentPosition = currentPosition;
+          _duration = duration;
+          _progressWidth = (currentPosition / duration) * progressMaxWidth;  
+        });
+      }            
   }
   void createUpdatePlayerTimer() {
     _updatePlayerTimer?.cancel();
