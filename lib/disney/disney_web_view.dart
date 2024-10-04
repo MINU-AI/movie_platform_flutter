@@ -5,7 +5,6 @@ import 'package:player/extension.dart';
 
 import '../cache_data_manager.dart';
 import '../logger.dart';
-import '../movie_repository.dart';
 import '../movie_web_view.dart';
 
 class DisneyWebView extends MovieWebView {

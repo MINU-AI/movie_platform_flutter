@@ -3,6 +3,7 @@ package com.minu.player
 import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
+import android.media.MediaCodecList
 import android.media.MediaDrm
 import android.provider.Settings
 import android.util.Log
@@ -28,6 +29,7 @@ import androidx.media3.exoplayer.source.MediaSource
 import androidx.media3.exoplayer.upstream.DefaultAllocator
 import androidx.media3.exoplayer.upstream.DefaultBandwidthMeter
 import androidx.media3.ui.PlayerView
+import com.minu.player.netflix.readInstanceProperty
 import io.flutter.plugin.common.BinaryMessenger
 import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugin.platform.PlatformView
@@ -177,7 +179,7 @@ val NativePlayerView.handleMethodCall: MethodChannel.MethodCallHandler
                 val brightness = try {
                     // Get the current brightness level (0 to 255)
                     val contentResolver = context.contentResolver
-                    Settings.System.getInt(contentResolver, Settings.System.SCREEN_BRIGHTNESS)
+                    Settings.System.getFloat(contentResolver, "screen_brightness_float")
                 } catch (e: Settings.SettingNotFoundException) {
                     e.printStackTrace()
                     // Handle exception if brightness setting is not found
@@ -247,7 +249,7 @@ fun NativePlayerView.createPlayer(creationParams: Map<*, *>): Player {
             for (trackGroup in tracks.groups) {
                 for (i in 0..<trackGroup.length) {
                     val format = trackGroup.getTrackFormat(i)
-                    Log.d(TAG, "Got video format: ${format.sampleMimeType}, ${format.codecs}, ${format.bitrate}, ${format.width}, ${format.height}")
+                    Log.d(TAG, "Got video format: ${format.sampleMimeType}, codecs: ${format.codecs}, width: ${format.width}, height: ${format.height}")
                 }
             }
         }
@@ -357,15 +359,18 @@ fun NativePlayerView.createMediaSource(creationParams: Map<*, *>): MediaSource {
             val fileSourceFactory = FileDataSource.Factory()
             val dashChunkSourceFactory = DefaultDashChunkSource.Factory(dataSourceFactory)
             val token = metadata["token"] as String
+            val primeMediaDrmCallback = HuluDrmCallback(dataSourceFactory, licenseKeyUrl!!, token)
+            val drmSessionManager = DefaultDrmSessionManager.Builder().build(primeMediaDrmCallback)
             val dashMediaSource = DashMediaSource.Factory(dashChunkSourceFactory, fileSourceFactory)
+                .setDrmSessionManagerProvider { drmSessionManager }
                 .createMediaSource(
                     MediaItem.Builder()
                         .setUri(playBackUrl)
                         // DRM Configuration
                         .setDrmConfiguration(
                             MediaItem.DrmConfiguration.Builder(drmSchemeUuid)
-                                .setLicenseUri(licenseKeyUrl)
-                                .setLicenseRequestHeaders(mapOf("Authorization" to "Bearer $token"))
+//                                .setLicenseUri(licenseKeyUrl)
+//                                .setLicenseRequestHeaders(mapOf("Authorization" to "Bearer $token"))
                                 .build()
                         )
                         .setMimeType(MimeTypes.APPLICATION_MPD)
@@ -377,6 +382,27 @@ fun NativePlayerView.createMediaSource(creationParams: Map<*, *>): MediaSource {
 
         else -> {
             throw RuntimeException("Unimplemented player for movie platform: $moviePlatform")
+        }
+    }
+}
+
+fun printSupportedCodes() {
+    val codecList = MediaCodecList(MediaCodecList.ALL_CODECS)
+    val codecInfos = codecList.codecInfos
+
+    for (codecInfo in codecInfos) {
+        if (!codecInfo.isEncoder) {
+            val supportedTypes = codecInfo.supportedTypes
+            for (type in supportedTypes) {
+                if (type.equals("video/avc", ignoreCase = true)) {
+                    val capabilities = codecInfo.getCapabilitiesForType("video/avc")
+                    val profileLevels = capabilities.profileLevels
+
+                    for (profileLevel in profileLevels) {
+                        Log.d("Got CodecSupport", "H.264 profile ${profileLevel.profile} with level ${profileLevel.level} is supported")
+                    }
+                }
+            }
         }
     }
 }

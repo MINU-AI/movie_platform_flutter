@@ -1,7 +1,10 @@
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:player/logger.dart';
 import 'package:player/player.dart';
+import 'package:player/text_view.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -52,7 +55,18 @@ class _HomeState extends State<HomeScreen> {
                         
                       },
                       child: const Text("Pick video"),          
-                    )
+                    ),
+
+          GestureDetector(
+            onTap: () async {
+              Map<Permission, PermissionStatus> statuses = await [
+                  Permission.camera, Permission.microphone
+                ].request();
+
+                logger.i("Got permission status: ${statuses[Permission.location]}");
+            },
+            child: const TextView(text: "Show permission"),
+          )
        
         ],
       );

@@ -48,10 +48,8 @@ class HuluApi extends MovieRepository {
     } catch (e) {
       logger.e(e);
       await refreshToken();
-      getMovieInfo(movieId, retry+1);
+      return getMovieInfo(movieId, retry+1);
     }
-
-    throw "Cannot get movie info";
   }
 
   @override

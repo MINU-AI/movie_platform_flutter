@@ -358,7 +358,7 @@ extension on _PlayerViewState {
     releaseControlTimer();
     _isLanscape = !_isLanscape;
     widget.onFullscreen?.call(_isLanscape);
-    final orientation = _isLanscape ? DeviceOrientation.landscapeRight : DeviceOrientation.portraitUp;
+    final orientation = _isLanscape ? DeviceOrientation.landscapeLeft : DeviceOrientation.portraitUp;
     SystemChrome.setPreferredOrientations([
       orientation
     ]);
@@ -385,10 +385,9 @@ extension on _PlayerViewState {
   }
 
   void initBrightness() async {
-    final brightness = await widget.player.brightness ?? 0;  
-    logger.i("Got brightness: $brightness");
-    setState(() {
-      _currentBrightness = Platform.isAndroid ? brightness / 255 : brightness;
+    _currentBrightness = await widget.player.brightness ?? 0;  
+    logger.i("Got brightness: $_currentBrightness");
+    setState(() {      
     },);    
   }
 }

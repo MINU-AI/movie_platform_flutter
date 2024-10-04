@@ -9,6 +9,8 @@ class PlayerPlugin: FlutterPlugin {
     flutterPluginBinding
       .platformViewRegistry
       .registerViewFactory(PlatformViewType.widevinePlayer.name, NativePlayerViewFactory(flutterPluginBinding.binaryMessenger))
+
+    printSupportedCodes()
   }
 
 

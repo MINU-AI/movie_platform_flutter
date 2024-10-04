@@ -21,6 +21,7 @@ class _HuluState extends PlatformState<HuluWebView> {
   @override
   void onUrlChange(String url) async {
     if(_isGotMovie) {
+      _isGotMovie = false;
       return;
     }
     
