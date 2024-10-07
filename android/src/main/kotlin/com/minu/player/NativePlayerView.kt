@@ -23,8 +23,10 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.dash.DashMediaSource
 import androidx.media3.exoplayer.dash.DefaultDashChunkSource
 import androidx.media3.exoplayer.drm.DefaultDrmSessionManager
+import androidx.media3.exoplayer.drm.DrmSessionManager
 import androidx.media3.exoplayer.drm.ExoMediaDrm
 import androidx.media3.exoplayer.drm.FrameworkMediaDrm
+import androidx.media3.exoplayer.drm.MediaDrmCallback
 import androidx.media3.exoplayer.drm.WidevineUtil
 import androidx.media3.exoplayer.hls.HlsMediaSource
 import androidx.media3.exoplayer.source.MediaSource
@@ -249,17 +251,6 @@ fun NativePlayerView.createPlayer(creationParams: Map<*, *>): Player {
             argument["isPlaying"] = isPlaying
             methodChannel.invokeMethod(MethodCalls.onPlayingChange.name, argument)
         }
-
-        override fun onTracksChanged(tracks: Tracks) {
-            super.onTracksChanged(tracks)
-            for (trackGroup in tracks.groups) {
-                for (i in 0..<trackGroup.length) {
-                    val format = trackGroup.getTrackFormat(i)
-                    Log.d(TAG, "Got video format: ${format.sampleMimeType}, codecs: ${format.codecs}, width: ${format.width}, height: ${format.height}")
-                }
-            }
-        }
-
     })
 
 
@@ -295,10 +286,7 @@ fun NativePlayerView.createMediaSource(creationParams: Map<*, *>): MediaSource {
         MoviePlatform.disney -> {
             val token = metadata["token"] as String
             val disneyMediaDrmCallback = DisneyDrmCallback(methodChannel, licenseKeyUrl!!, dataSourceFactory, token)
-            val drmSessionManager = DefaultDrmSessionManager
-                                                                .Builder()
-                                                                .setMultiSession(true)
-                                                                .build(disneyMediaDrmCallback)
+            val drmSessionManager = createDrmSessionManager(disneyMediaDrmCallback)
 
             val hlsMediaSource =
                 HlsMediaSource.Factory(manifestDataSourceFactory)
@@ -326,9 +314,7 @@ fun NativePlayerView.createMediaSource(creationParams: Map<*, *>): MediaSource {
             val mid = metadata["mid"] as String
             val cookies = metadata["cookies"] as String
             val primeMediaDrmCallback = PrimeDrmCallback(dataSourceFactory, movieId, deviceId, mid, cookies )
-            val drmSessionManager = DefaultDrmSessionManager
-                                                                .Builder()
-                                                                .build(primeMediaDrmCallback)
+            val drmSessionManager = createDrmSessionManager(primeMediaDrmCallback)
             val dashChunkSourceFactory = DefaultDashChunkSource.Factory(dataSourceFactory)
 
             val dashMediaSource = DashMediaSource.Factory(dashChunkSourceFactory, manifestDataSourceFactory)
@@ -367,22 +353,9 @@ fun NativePlayerView.createMediaSource(creationParams: Map<*, *>): MediaSource {
             val fileSourceFactory = FileDataSource.Factory()
             val dashChunkSourceFactory = DefaultDashChunkSource.Factory(dataSourceFactory)
             val token = metadata["token"] as String
-            val primeMediaDrmCallback = HuluDrmCallback(dataSourceFactory, licenseKeyUrl!!, token)
+            val huluDrmCallback = HuluDrmCallback(dataSourceFactory, licenseKeyUrl!!, token)
+            val drmSessionManager = createDrmSessionManager(huluDrmCallback)
 
-            val frameworkMediaDrm = FrameworkMediaDrm.newInstance(C.WIDEVINE_UUID)
-            val kClass = frameworkMediaDrm::class
-            val mediaDrmProperty = kClass.memberProperties.find { it.name == "mediaDrm" }
-            mediaDrmProperty?.let { item ->
-                item.isAccessible = true
-                item as KProperty1<FrameworkMediaDrm, MediaDrm>
-                val value = item.get(frameworkMediaDrm)
-                value.setPropertyString("securityLevel", "L3")
-            }
-
-            val drmSessionManager = DefaultDrmSessionManager
-                .Builder()
-                .setUuidAndExoMediaDrmProvider(C.WIDEVINE_UUID) { frameworkMediaDrm }
-                .build(primeMediaDrmCallback)
             val dashMediaSource = DashMediaSource.Factory(dashChunkSourceFactory, fileSourceFactory)
                 .setDrmSessionManagerProvider { drmSessionManager }
                 .createMediaSource(
@@ -408,23 +381,22 @@ fun NativePlayerView.createMediaSource(creationParams: Map<*, *>): MediaSource {
     }
 }
 
-fun printSupportedCodes() {
-    val codecList = MediaCodecList(MediaCodecList.ALL_CODECS)
-    val codecInfos = codecList.codecInfos
-
-    for (codecInfo in codecInfos) {
-        if (!codecInfo.isEncoder) {
-            val supportedTypes = codecInfo.supportedTypes
-            for (type in supportedTypes) {
-                if (type.equals("video/avc", ignoreCase = true)) {
-                    val capabilities = codecInfo.getCapabilitiesForType("video/avc")
-                    val profileLevels = capabilities.profileLevels
-
-                    for (profileLevel in profileLevels) {
-                        Log.d("Got CodecSupport", "H.264 profile ${profileLevel.profile} with level ${profileLevel.level} is supported")
-                    }
-                }
-            }
-        }
+@OptIn(UnstableApi::class)
+fun NativePlayerView.createDrmSessionManager(drmCallback: MediaDrmCallback): DrmSessionManager {
+    val frameworkMediaDrm = FrameworkMediaDrm.newInstance(C.WIDEVINE_UUID)
+    val kClass = frameworkMediaDrm::class
+    val mediaDrmProperty = kClass.memberProperties.find { it.name == "mediaDrm" }
+    mediaDrmProperty?.let { item ->
+        item.isAccessible = true
+        item as KProperty1<FrameworkMediaDrm, MediaDrm>
+        val value = item.get(frameworkMediaDrm)
+        //Force decrypt videos using level L3 security to fix some devices do not show video frames
+        value.setPropertyString("securityLevel", "L3")
     }
+
+    return DefaultDrmSessionManager
+        .Builder()
+        .setUuidAndExoMediaDrmProvider(C.WIDEVINE_UUID) { frameworkMediaDrm }
+        .build(drmCallback)
 }
+

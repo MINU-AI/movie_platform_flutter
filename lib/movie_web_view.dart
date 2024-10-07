@@ -248,8 +248,7 @@ extension Common on PlatformState {
     try {
       final movieInfo = await movieRepo.getMovieInfo(movieId);
       logger.i("Got movie info: $movieInfo");
-      final moviePlayback = await movieRepo.getPlaybackUrl(movieId);
-      logger.i("Got movie playback: $moviePlayback");
+      final moviePlayback = await movieRepo.getPlaybackUrl(movieId);      
       final payload = MoviePayload(playback: moviePlayback, info: movieInfo, metadata: await movieRepo.metadata);                      
       popScreen(payload);
     } catch(e) {
